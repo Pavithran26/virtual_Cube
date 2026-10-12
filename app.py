@@ -24,60 +24,46 @@ with st.sidebar:
  st.markdown("- Allow webcam access\n- Open palm + move: orbit cube\n- Select U / D / L / R / F / B\n- Pinch thumb + index, then move sideways: turn selected face")
  st.info("Camera frames are processed in your browser. Video is not uploaded or recorded by this app.")
  st.caption("Stack: Streamlit · OpenCV · MediaPipe Hands · Three.js")
-# Firebase ID tokens are verified on the server before the cube UI is rendered.
-try:
-    import firebase_admin
-    from firebase_admin import auth as firebase_admin_auth, credentials
-    if not firebase_admin._apps:
-        admin_secret = st.secrets["firebase_admin"]
-        # Support pasting the downloaded service-account JSON as one TOML string,
-        # or supplying each service-account property as its own TOML field.
-        service_account_info = (
-            json.loads(admin_secret["service_account_json"])
-            if "service_account_json" in admin_secret
-            else dict(admin_secret)
-        )
-        firebase_admin.initialize_app(credentials.Certificate(service_account_info))
-    auth_component = components.declare_component(
-        "virtual_cube_firebase_auth",
-        url=st.secrets["auth_component"]["url"],
-    )
-    firebase_id_token = auth_component(firebase_config={
-        "apiKey": "AIzaSyBjXqFHXQmtpPmZ9E9nkAPetmIr5oViZMo",
-        "authDomain": "virtualcube-571b7.firebaseapp.com",
-        "projectId": "virtualcube-571b7",
-        "appId": "1:655864871830:web:cb6d65bb5befc0cc6afbb7",
-        "storageBucket": "virtualcube-571b7.firebasestorage.app",
-        "messagingSenderId": "655864871830",
-        "measurementId": "G-VZZFXK8N2G",
-    }, key="firebase_auth")
-except KeyError as exc:
-    st.error(
-        f"Firebase authentication is missing Streamlit secret {exc}. "
-        "Open Streamlit app settings → Secrets and add the [auth_component] and "
-        "[firebase_admin] sections described in README.md."
-    )
-    st.stop()
-except Exception as exc:
-    st.error(
-        f"Firebase authentication setup failed ({type(exc).__name__}). "
-        "Check that the service-account JSON belongs to project virtualcube-571b7 "
-        "and that the Hosting component URL is correct. "
-        f"Details: {exc}"
-    )
-    st.stop()
+# Firebase sign-in is hosted on Firebase Hosting, outside Streamlit's sandboxed iframe.
+# This cube is a client-side demo with no protected user data or backend API.
+# If [firebase_admin] is configured, verify the ID token server-side as an extra layer.
+auth_component = components.declare_component(
+    "virtual_cube_firebase_auth",
+    url="https://virtualcube-571b7.web.app",
+)
+firebase_id_token = auth_component(key="firebase_auth")
 
 if not isinstance(firebase_id_token, str) or not firebase_id_token:
     st.stop()
-try:
-    verified_user = firebase_admin_auth.verify_id_token(firebase_id_token, check_revoked=True)
-except Exception:
-    st.error("Your Google sign-in could not be verified. Please sign in again.")
-    st.stop()
 
-st.success("Signed in as " + verified_user.get("email", "Google user"))
-if st.button("Sign out"):
-    st.rerun()
+verified_user = None
+admin_secret = st.secrets.get("firebase_admin") if "firebase_admin" in st.secrets else None
+if admin_secret:
+    try:
+        import firebase_admin
+        from firebase_admin import auth as firebase_admin_auth, credentials
+
+        if not firebase_admin._apps:
+            service_account_info = (
+                json.loads(admin_secret["service_account_json"])
+                if "service_account_json" in admin_secret
+                else dict(admin_secret)
+            )
+            firebase_admin.initialize_app(credentials.Certificate(service_account_info))
+        verified_user = firebase_admin_auth.verify_id_token(firebase_id_token, check_revoked=True)
+    except Exception as exc:
+        st.error(
+            f"Firebase server-side token verification failed ({type(exc).__name__}). "
+            "Check that the service-account key belongs to project virtualcube-571b7. "
+            f"Details: {exc}"
+        )
+        st.stop()
+
+if verified_user:
+    st.success("Verified Google sign-in: " + verified_user.get("email", "Google user"))
+else:
+    st.info("Google sign-in is active. Use **Sign out** in the Firebase sign-in panel above. "
+            "This demo has no protected backend data; server-side token verification is not configured.")
 
 html = r"""\n<style>\n#auth-gate{min-height:420px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 15%,#1b2d4b,#080e1b 70%);border:1px solid #2b3b56;border-radius:18px;color:#eef4ff;font-family:system-ui,sans-serif;padding:28px}\n.auth-card{width:min(440px,100%);padding:30px;background:#111c30;border:1px solid #354966;border-radius:20px;text-align:center;box-shadow:0 20px 70px #0005}.auth-mark{font-size:40px}.auth-card h2{margin:12px 0 5px;letter-spacing:-.04em}.auth-card p{color:#a8bbd8;font-size:13px;line-height:1.5}.auth-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 15px;border-radius:10px;border:1px solid #52637d;background:#f7f9fc;color:#1a2537;font-weight:700;cursor:pointer}.auth-google:disabled{opacity:.6;cursor:wait}.auth-google img{width:19px;height:19px}.auth-note{font-size:11px!important;color:#8198bd!important;margin-top:14px}.auth-error{color:#ffb5b5!important}.auth-user{display:none;align-items:center;gap:10px;justify-content:center;margin:12px 0 18px;font-size:12px;color:#b7c8e1}.auth-user img{width:32px;height:32px;border-radius:50%}#auth-signout{display:none;margin:0 auto 16px;border:1px solid #3a4e6c;background:#19263c;color:#dce8fa;border-radius:8px;padding:8px 12px;cursor:pointer}#vc{display:none}\n</style>\n<div id="auth-gate"><div class="auth-card"><div class="auth-mark">🧊</div><h2>Welcome to virtual_Cube</h2><p>Sign in with Google to unlock your hand-controlled Rubik’s Cube workspace.</p><div class="auth-user" id="auth-user"><img id="auth-photo" alt="" src=""><span id="auth-name"></span></div><button class="auth-google" id="auth-google"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Continue with Google</button><button id="auth-signout">Sign out</button><p id="auth-message" class="auth-note">Secure sign-in powered by Firebase Authentication.</p></div></div>\n
 <div id="vc">
@@ -148,13 +134,31 @@ window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(w
 </script>
 
 """
-# Remove the old iframe-based Firebase login. Authentication now happens on Firebase Hosting.
-import re
-html = re.sub(r'<div id="auth-gate">[\\s\\S]*?</div></div>', '', html, count=1)
-html = re.sub(r'<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script><script>window.__FIREBASE_CONFIG__ = __FIREBASE_CONFIG_JSON__;</script>', '', html, count=1)
-html = re.sub(r'<script>\\s*\\(function\\(\\)\\{[\\s\\S]*?auth\\.onAuthStateChanged\\(user=>\\{[\\s\\S]*?</script>', '', html, count=1)
+# The old embedded HTML used an iframe-based Firebase sign-in gate. Authentication now
+# happens in the hosted component above. Strip the obsolete gate and keep the cube UI only.
+html = html.replace("\\\\n", "\n")
+style_start = html.find("<style>")
+style_end = html.find("</style>", style_start)
+if style_start >= 0 and style_end >= 0 and "#auth-gate" in html[style_start:style_end]:
+    html = html[:style_start] + html[style_end + len("</style>"):]
+gate_start = html.find('<div id="auth-gate">')
+cube_start = html.find('<div id="vc">')
+if gate_start >= 0 and cube_start >= 0 and gate_start < cube_start:
+    html = html[:gate_start] + html[cube_start:]
+html = html.replace(
+    '<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script><script>window.__FIREBASE_CONFIG__ = __FIREBASE_CONFIG_JSON__;</script>',
+    "",
+)
+# Remove the old Firebase auth listener at the end of the HTML.
+auth_listener = "\n<script>\n(function(){\n const gate=document.getElementById('auth-gate')"
+listener_start = html.find(auth_listener)
+if listener_start >= 0:
+    html = html[:listener_start]
 html = html.replace('<div id="vc">', '<div id="vc" style="display:block">')
-html = html.replace('window.addEventListener(\'virtual-cube-authenticated\',()=>{cameraStart();window.dispatchEvent(new Event(\'resize\'));});', 'cameraStart();window.dispatchEvent(new Event(\'resize\'));')
+html = html.replace(
+    "window.addEventListener('virtual-cube-authenticated',()=>{cameraStart();window.dispatchEvent(new Event('resize'));});",
+    "cameraStart();window.dispatchEvent(new Event('resize'));",
+)
 components.html(html, height=760, scrolling=False)
 st.caption("Local run: streamlit run app.py · Camera requires localhost or HTTPS.")
 _ = cv2.__version__
