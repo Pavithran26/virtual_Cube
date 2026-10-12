@@ -14,12 +14,12 @@ The cube and Firebase Google sign-in now run together on Firebase Hosting at **h
 - **Play Guide** opens the interactive tutorial before immersive play.
 - A clearly visible **Sign out** button sits in the signed-in lobby header. Press Esc during Play to return to the lobby before signing out.
 - Interactive 3D 3×3 cube with six colored faces.
-- A live holographic 3D hand is rendered from MediaPipe’s 21 hand landmarks, with glowing joints, connected finger bones, and a translucent palm.
-- Open palm motion rotates the whole cube in real time with bounded, smoother movement.
-- Select U / D / L / R / F / B, then pinch and drag to turn a face.
+- Immersive Play renders **only the 3D cube**: no webcam preview, face, hand hologram, gameplay HUD, or on-screen controls.
+- Open-palm motion rotates the whole cube in real time while the camera and hand landmarks remain invisible.
+- Select U / D / L / R / F / B in the guide/lobby mode, then pinch and drag to turn a face during Play.
 - Light glassmorphism UI with frosted panels, reflective edges, soft shadows, and cyan/violet ambient lighting.
 - Tutorial, scramble, and reset controls.
-- Hand landmarks are processed in the browser; this app does not upload or record video.
+- Hand landmarks are processed in the browser; this app does not upload or record video. Press Esc to leave cube-only Play and return to the lobby, where Sign out is available.
 
 ## Deploy changes
 
@@ -67,3 +67,9 @@ This is an interactive client-side demo. Firebase sign-in gates the UI, but it d
 - **The iframe shows the older login-only page:** deploy Hosting again with the command above.
 
 Stack: Python, Streamlit, OpenCV, Firebase Authentication, Google Sign-In, MediaPipe Hands, Three.js.
+
+## Recent fixes
+
+- Fixed the camera projection update on resize so the 3D view adapts correctly to the viewport.
+- Made immersive Play cube-only by hiding the hand visualization and immersive HUD while keeping gesture detection active.
+- Manual QA still required in a real browser for Google sign-in, camera permissions, and hand tracking on the deployed Firebase domain.
