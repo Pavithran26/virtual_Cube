@@ -3,11 +3,6 @@ import streamlit.components.v1 as components
 import cv2
 
 import json
-firebase_config = dict(st.secrets.get("firebase", {}))
-required_firebase_keys = ("apiKey", "authDomain", "projectId", "appId")
-firebase_config_ready = all(firebase_config.get(k) for k in required_firebase_keys)
-firebase_config_json = json.dumps(firebase_config if firebase_config_ready else None)
-
 
 st.set_page_config(page_title="virtual_Cube", page_icon="🧊", layout="wide")
 st.markdown("""
