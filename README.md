@@ -10,7 +10,7 @@ The cube and Firebase Google sign-in now run together on Firebase Hosting at **h
 
 - Google sign-in UI powered by Firebase Authentication.
 - A signed-in game lobby with separate **Play** and **Play Guide** actions.
-- **Play** opens an immersive, UI-free cube view; the webcam feed remains off-screen and is used only for hand tracking. Press Esc to exit. Keyboard U/D/L/R/F/B selects the face, and pinch-drag turns it.
+- **Play** opens the top-level Firebase page in a new tab when launched from Streamlit, then enters an immersive, UI-free cube view. The webcam feed remains off-screen and is used only for hand tracking. Press Esc to exit. Keyboard U/D/L/R/F/B selects the face; pinch-drag turns it.
 - **Play Guide** opens the interactive tutorial before immersive play.
 - Interactive 3D 3×3 cube with six colored faces.
 - A live holographic 3D hand is rendered from MediaPipe’s 21 hand landmarks, with glowing joints, connected finger bones, and a translucent palm.
@@ -62,7 +62,7 @@ This is an interactive client-side demo. Firebase sign-in gates the UI, but it d
 ## Troubleshooting
 
 - **Google sign-in says unauthorized domain:** add the exact host in Firebase Authentication's authorized domains.
-- **Camera does not start in the embedded view:** click **Open virtual_Cube full-screen** below the embedded app, then allow camera access in the browser.
+- **The browser blocks a pop-up when you click Play:** allow pop-ups for `virtualcube.streamlit.app`, or use **Open virtual_Cube full-screen** below the embedded app. The top-level Firebase page is used to request webcam permission, but never renders the camera feed.
 - **The iframe shows the older login-only page:** deploy Hosting again with the command above.
 
 Stack: Python, Streamlit, OpenCV, Firebase Authentication, Google Sign-In, MediaPipe Hands, Three.js.
