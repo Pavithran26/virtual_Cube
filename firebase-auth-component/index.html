@@ -53,7 +53,7 @@
  <div class="bar"><button id="back-to-lobby" title="Back to game menu">← Lobby</button><span id="status">Starting scene…</span><div id="faces"><button data-f="U" class="on">U ↑</button><button data-f="D">D ↓</button><button data-f="L">L ←</button><button data-f="R">R →</button><button data-f="F">F ●</button><button data-f="B">B ◌</button></div><button id="scramble">Scramble</button><button id="reset">Reset</button></div>
  <div class="stage"><div id="scene"></div><div class="hud"><small>GESTURE</small><b id="gesture">Waiting for hand</b><small>SELECTED FACE</small><b id="selected">U · Up</b></div>
  <div class="cam"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas><label>● LIVE CAMERA</label></div>
- <div class="guide" id="guide"><small>INTERACTIVE TUTORIAL · <span id="num">1 / 3</span></small><h3 id="title">Meet your cube</h3><p id="body">Allow camera access and hold one hand in view with your palm facing the camera.</p><div class="arrow" id="arrow">✦</div><div class="guidebtn"><button id="prev" disabled>← Back</button><button id="next">Next step →</button><button id="hide">Hide</button></div></div></div>
+ <div class="guide" id="guide"><small>INTERACTIVE TUTORIAL · <span id="num">1 / 3</span></small><h3 id="title">Meet your cube</h3><p id="body">Allow camera access. Your camera feed stays hidden; only a live virtual hand is rendered from your hand landmarks.</p><div class="arrow" id="arrow">✦</div><div class="guidebtn"><button id="prev" disabled>← Back</button><button id="next">Next step →</button><button id="hide">Hide</button></div></div></div>
  <div class="foot"><div><b>01 · ROTATE</b><span>Open palm, move your hand to orbit.</span></div><div><b>02 · SELECT</b><span>Choose the face you want to turn.</span></div><div><b>03 · TURN</b><span>Pinch and drag sideways.</span></div></div><div id="note">Camera requires permission and localhost or HTTPS. Face buttons work without a camera.</div>
 </div>
 <style>
@@ -160,7 +160,7 @@ function resize(){if(!renderer)return;let w=$('scene').clientWidth,h=$('scene').
 function turn(f,dir=1){let axis=['U','D'].includes(f)?'y':['L','R'].includes(f)?'x':'z',sign=['D','L','B'].includes(f)?-1:1;let pivot=new THREE.Group();scene.add(pivot);let layer=cubies.filter(c=>Math.round(c.position[axis]/1.03)===sign);layer.forEach(c=>pivot.attach(c));let start=performance.now(),angle=dir*Math.PI/2;function tick(now){let t=Math.min(1,(now-start)/220);pivot.rotation[axis]=angle*(t*t*(3-2*t));if(t<1)requestAnimationFrame(tick);else{pivot.updateMatrixWorld(true);layer.forEach(c=>{scene.attach(c);['x','y','z'].forEach(k=>{c.position[k]=Math.round(c.position[k]/1.03)*1.03;c.rotation[k]=Math.round(c.rotation[k]/(Math.PI/2))*(Math.PI/2)})});scene.remove(pivot)}}requestAnimationFrame(tick)}
 function choose(f){face=f;document.querySelectorAll('#faces button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));$('selected').textContent=f+' · '+names[f]}
 document.querySelectorAll('#faces button').forEach(b=>b.onclick=()=>choose(b.dataset.f));$('reset').onclick=()=>{camera.position.set(5.7,5,7.5);camera.lookAt(0,0,0);build();$('note').textContent='Cube restored to solved state.'};$('scramble').onclick=()=>{let n=0,fs=Object.keys(colors);function go(){turn(fs[Math.floor(Math.random()*6)],Math.random()>.5?1:-1);if(++n<12)setTimeout(go,260)}go()};
-const steps=[['Meet your cube','Allow camera access and hold one hand in view with your palm facing the camera.','✦'],['Orbit the whole cube','Spread your fingers into an open palm. Move your hand left/right or up/down to rotate the view.','↔'],['Turn one face','Select U, D, L, R, F, or B. Pinch thumb and index, then move sideways to turn that layer.','↻']];let si=0;function show(){let s=steps[si];$('num').textContent=(si+1)+' / 3';$('title').textContent=s[0];$('body').textContent=s[1];$('arrow').textContent=s[2];$('prev').disabled=si===0;$('next').textContent=si===2?'Got it ✓':'Next step →'}$('next').onclick=()=>{if(si<2){si++;show()}else $('guide').style.display='none'};$('prev').onclick=()=>{if(si){si--;show()}};$('hide').onclick=()=>$('guide').style.display='none';show();
+const steps=[['Meet your cube','Allow camera access and hold one hand in view with your palm facing the camera.','✦'],['Orbit the whole cube','Spread your fingers into an open palm. Move your hand left/right or up/down to rotate the view.','↔'],['Turn one face','While playing, press U, D, L, R, F, or B on your keyboard to select a face. Pinch thumb and index, then move sideways to turn it.','↻']];let si=0;function show(){let s=steps[si];$('num').textContent=(si+1)+' / 3';$('title').textContent=s[0];$('body').textContent=s[1];$('arrow').textContent=s[2];$('prev').disabled=si===0;$('next').textContent=si===2?'Got it ✓':'Next step →'}$('next').onclick=()=>{if(si<2){si++;show()}else $('guide').style.display='none'};$('prev').onclick=()=>{if(si){si--;show()}};$('hide').onclick=()=>$('guide').style.display='none';show();
 function results(r){
  const h=r.multiHandLandmarks&&r.multiHandLandmarks[0];
  if(!h){
@@ -206,7 +206,7 @@ window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(w
  const playGuide=document.getElementById('play-guide');
  const guide=document.getElementById('guide');
 
- function launch(mode){
+ function runLaunch(mode){
    lobby.style.display='none';
    app.style.display='block';
    app.classList.remove('is-playing','is-guide');
@@ -229,6 +229,20 @@ window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(w
      window.dispatchEvent(new Event('resize'));
    }
    if(window.startVirtualCubeCamera)window.startVirtualCubeCamera();
+ }
+ function launch(mode){
+   // If inside Streamlit, open a top-level Firebase tab. This gives the browser
+   // normal camera permission handling and an actual full-screen game viewport.
+   if(window.self!==window.top){
+     const target=new URL(window.location.href);
+     target.searchParams.set('launch',mode);
+     const opened=window.open(target.toString(),'_blank');
+     if(!opened){
+       alert('Please allow pop-ups for this site, then press Play again. The camera stays hidden during play.');
+     }
+     return;
+   }
+   runLaunch(mode);
  }
  function returnToLobby(){
    if(!lobby||!app)return;
@@ -258,6 +272,7 @@ window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(w
    }
  });
  window.virtualCubeReturnToLobby=returnToLobby;
+ window.virtualCubeLaunch=launch;
 })();
 </script>
 <script>
@@ -289,6 +304,13 @@ window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(w
     if(window.stopVirtualCubeCamera)window.stopVirtualCubeCamera();
     lobby.style.display='flex';
     document.getElementById('lobby-player').textContent='Signed in as '+(user.displayName||user.email||'Google user')+'. Ready when you are.';
+    const requestedMode=new URLSearchParams(window.location.search).get('launch');
+    if((requestedMode==='play'||requestedMode==='guide')&&!window.__virtualCubeLaunchHandled){
+      window.__virtualCubeLaunchHandled=true;
+      const cleanUrl=new URL(window.location.href);cleanUrl.searchParams.delete('launch');
+      history.replaceState({},'',cleanUrl.pathname+cleanUrl.search+cleanUrl.hash);
+      setTimeout(()=>window.virtualCubeLaunch&&window.virtualCubeLaunch(requestedMode),250);
+    }
     userBox.style.display='flex';
     document.getElementById('auth-name').textContent=user.displayName||user.email||'Signed in';
     const photo=document.getElementById('auth-photo');
@@ -566,7 +588,7 @@ body::after{width:320px;height:320px;right:-120px;bottom:2%;background:rgba(164,
 #vc .cam{position:fixed!important;left:-2000px!important;top:0!important;width:640px!important;height:480px!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;z-index:-10!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
 #vc.is-guide .stage{height:560px}
 #vc.is-playing{position:fixed!important;inset:0!important;z-index:99999!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:radial-gradient(ellipse at 50% 44%,rgba(177,224,255,.3),transparent 48%),linear-gradient(135deg,#eff8ff,#e8f1ff 58%,#f4efff)!important;box-shadow:none!important}
-#vc.is-playing .bar,#vc.is-playing .hud,#vc.is-playing .cam,#vc.is-playing .guide,#vc.is-playing .foot,#vc.is-playing #note{display:none!important}
+#vc.is-playing .bar,#vc.is-playing .hud,#vc.is-playing .guide,#vc.is-playing .foot,#vc.is-playing #note{display:none!important}
 #vc.is-playing .stage{position:absolute;inset:0;width:100%;height:100%;min-height:100%;border:0;background:transparent!important;overflow:hidden}
 #vc.is-playing #scene{position:absolute;inset:0;width:100%;height:100%}#vc.is-playing #scene canvas{display:block;width:100%;height:100%}
 body.play-mode{padding:0!important;overflow:hidden!important}body.play-mode #lobby,body.play-mode #auth-gate{display:none!important}body.guide-mode{padding:clamp(6px,1.5vw,20px)}
