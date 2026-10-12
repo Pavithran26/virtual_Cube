@@ -37,6 +37,9 @@
 <script>
 (()=>{const $=id=>document.getElementById(id);let scene,camera,renderer,group,cubies=[],face='U',last=null,webcamController=null,handRig=null,handBones=null,handJoints=[],palmMesh=null,palmGeometry=null;
 
+const colors={R:0xd94141,L:0xff8c38,U:0xf5f7fb,D:0xf4d83d,F:0x39bd83,B:0x3478ef};
+const names={U:'Up',D:'Down',L:'Left',R:'Right',F:'Front',B:'Back'};
+const mats={};
 const handConnections=[
  [0,1],[1,2],[2,3],[3,4],
  [0,5],[5,6],[6,7],[7,8],
@@ -70,7 +73,7 @@ function initVirtualHand(){
    const jointMaterial=new THREE.MeshBasicMaterial({
      color:isTip?0x7d9dff:0x62e5e7,
      transparent:true,
-     opacity:isTip?.98:.88,
+     opacity:isTip ? .98 : .88,
      depthTest:false
    });
    const joint=new THREE.Mesh(jointGeometry,jointMaterial);
