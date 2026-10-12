@@ -13,5 +13,6 @@ Streamlit.setComponentReady();Streamlit.setFrameHeight(180);
 login.onclick=async()=>{login.disabled=true;status.textContent='Opening Google sign-in…';try{await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());}catch(e){status.className='error';status.textContent=(e.code||'auth/error')+': '+e.message;login.disabled=false;}};
 logout.onclick=()=>auth.signOut();
 auth.onAuthStateChanged(async user=>{if(user){login.style.display='none';logout.style.display='inline-flex';status.className='muted';status.textContent='Signed in as '+(user.email||user.displayName||'Google user');try{send(await user.getIdToken());}catch(e){status.className='error';status.textContent='Could not get sign-in token.';}}else{login.style.display='inline-flex';login.disabled=false;logout.style.display='none';status.className='muted';status.textContent='Authentication required.';send(null);}});
-window.addEventListener('message',e=>{if(e.data&&e.data.type==='streamlit:render'){Streamlit.setComponentValue(null);}});
+// Do not send null on every Streamlit render: that would erase the ID token
+// immediately after sign-in and can cause an authentication rerun loop.
 </script></body></html>
