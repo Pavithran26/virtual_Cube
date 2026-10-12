@@ -356,45 +356,9 @@ function initVirtualHand(){
 }
 
 function updateVirtualHand(landmarks){
- // Immersive play is intentionally cube-only: keep the webcam-derived hand rig invisible.
- // Landmarks are still consumed by results() for gesture controls; no camera or hand preview is rendered.
+ // Keep the hand rig invisible in every mode. MediaPipe landmarks still drive gesture input in results().
  if(handRig)handRig.visible=false;
- return;
- if(!handRig||!camera||!landmarks){if(handRig)handRig.visible=false;return;}
- handRig.visible=true;
- const distance=4.2;
- const viewHeight=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*distance;
- const viewWidth=viewHeight*camera.aspect;
- const direction=new THREE.Vector3();
- camera.getWorldDirection(direction);
- handRig.position.copy(camera.position).addScaledVector(direction,distance);
- handRig.quaternion.copy(camera.quaternion);
- const points=landmarks.map(p=>new THREE.Vector3(
-   (0.5-p.x)*viewWidth,
-   (0.5-p.y)*viewHeight,
-   -p.z*1.15
- ));
- points.forEach((p,i)=>handJoints[i].position.copy(p));
- const boneAttr=handBones.geometry.attributes.position;
- let offset=0;
- handConnections.forEach(([a,b])=>{
-   const pa=points[a],pb=points[b];
-   boneAttr.array[offset++]=pa.x;boneAttr.array[offset++]=pa.y;boneAttr.array[offset++]=pa.z;
-   boneAttr.array[offset++]=pb.x;boneAttr.array[offset++]=pb.y;boneAttr.array[offset++]=pb.z;
- });
- boneAttr.needsUpdate=true;
- palmGeometry.attributes.position.array.set([
-   points[0].x,points[0].y,points[0].z,
-   points[1].x,points[1].y,points[1].z,
-   points[5].x,points[5].y,points[5].z,
-   points[9].x,points[9].y,points[9].z,
-   points[13].x,points[13].y,points[13].z,
-   points[17].x,points[17].y,points[17].z
- ]);
- palmGeometry.attributes.position.needsUpdate=true;
- palmGeometry.computeVertexNormals();
 }
-
 function build(){
  if(group)scene.remove(group);
  group=new THREE.Group();
