@@ -356,6 +356,10 @@ function initVirtualHand(){
 }
 
 function updateVirtualHand(landmarks){
+ // Immersive play is intentionally cube-only: keep the webcam-derived hand rig invisible.
+ // Landmarks are still consumed by results() for gesture controls; no camera or hand preview is rendered.
+ if(handRig)handRig.visible=false;
+ return;
  if(!handRig||!camera||!landmarks){if(handRig)handRig.visible=false;return;}
  handRig.visible=true;
  const distance=4.2;
@@ -535,7 +539,7 @@ function resize(){
  if(!renderer)return;
  let w=$('scene').clientWidth,h=$('scene').clientHeight;
  camera.aspect=w/h;
- camera.updateProjectionMatrix;
+ camera.updateProjectionMatrix();
  renderer.setSize(w,h);
 }
 
@@ -1215,7 +1219,7 @@ body.play-mode{padding:0!important;overflow:hidden!important}body.play-mode #lob
 }
 .immersive-hud button:hover{background:#fff;border-color:#7bdde2}
 .hud-tip{font-size:11px;color:#677d9c;font-weight:500}
-#vc.is-playing .immersive-hud{display:flex!important}
+#vc.is-playing .immersive-hud{display:none!important}
 @media(max-width:700px){.hud-tip{display:none}}
 
 /* Privacy hardening: capture frames for MediaPipe only, never display the live camera. */
