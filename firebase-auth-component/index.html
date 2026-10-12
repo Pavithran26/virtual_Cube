@@ -278,44 +278,24 @@ const handConnections=[
  [0,17],[0,9]
 ];
 
-// Rounded Cubie & Rounded Sticker Geometries
-function createRoundedCubieGeom(){
-  const w=0.94,h=0.94,d=0.94,r=0.045;
-  const shape=new THREE.Shape();
-  const hw=w/2-r,hh=h/2-r;
-  shape.moveTo(-hw,-hh-r);
-  shape.lineTo(hw,-hh-r);
-  shape.absarc(hw,-hh,r,-Math.PI/2,0,false);
-  shape.lineTo(hw+r,hh);
-  shape.absarc(hw,hh,r,0,Math.PI/2,false);
-  shape.lineTo(-hw,hh+r);
-  shape.absarc(-hw,hh,r,Math.PI/2,Math.PI,false);
-  shape.lineTo(-hw-r,-hh);
-  shape.absarc(-hw,-hh,r,Math.PI,Math.PI*1.5,false);
-  const geom=new THREE.ExtrudeGeometry(shape,{
-    depth:d-2*r,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:r,bevelThickness:r
-  });
-  geom.center();
-  return geom;
-}
+// Solid Cubie Core & Rounded Vinyl Sticker Geometries
+const cubieSharedGeom=new THREE.BoxGeometry(0.96,0.96,0.96);
 
 function createStickerGeom(){
-  const w=0.76,h=0.76,r=0.065;
+  const w=0.82,h=0.82,r=0.08;
   const shape=new THREE.Shape();
-  const hw=w/2-r,hh=h/2-r;
-  shape.moveTo(-hw,-hh-r);
-  shape.lineTo(hw,-hh-r);
-  shape.absarc(hw,-hh,r,-Math.PI/2,0,false);
-  shape.lineTo(hw+r,hh);
-  shape.absarc(hw,hh,r,0,Math.PI/2,false);
-  shape.lineTo(-hw,hh+r);
-  shape.absarc(-hw,hh,r,Math.PI/2,Math.PI,false);
-  shape.lineTo(-hw-r,-hh);
-  shape.absarc(-hw,-hh,r,Math.PI,Math.PI*1.5,false);
-  return new THREE.ShapeGeometry(shape,12);
+  shape.moveTo(-w/2+r,-h/2);
+  shape.lineTo(w/2-r,-h/2);
+  shape.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);
+  shape.lineTo(w/2,h/2-r);
+  shape.quadraticCurveTo(w/2,h/2,w/2-r,h/2);
+  shape.lineTo(-w/2+r,h/2);
+  shape.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r);
+  shape.lineTo(-w/2,-h/2+r);
+  shape.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2);
+  return new THREE.ShapeGeometry(shape,8);
 }
 
-const cubieSharedGeom=createRoundedCubieGeom();
 const stickerSharedGeom=createStickerGeom();
 
 const coreMaterial=new THREE.MeshStandardMaterial({
@@ -417,7 +397,7 @@ function build(){
  cubies=[];
  for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
   let g=new THREE.Group();
-  g.position.set(x*1.03,y*1.03,z*1.03);
+  g.position.set(x,y,z);
   g.userData={x,y,z};
   const bodyMesh=new THREE.Mesh(cubieSharedGeom,coreMaterial);
   g.add(bodyMesh);
@@ -429,12 +409,12 @@ function build(){
     s.userData={col,faceKey};
     g.add(s);
   };
-  if(x===1)sticker(new THREE.Vector3(.482,0,0),[0,Math.PI/2,0],colors.R,'R');
-  if(x===-1)sticker(new THREE.Vector3(-.482,0,0),[0,-Math.PI/2,0],colors.L,'L');
-  if(y===1)sticker(new THREE.Vector3(0,.482,0),[-Math.PI/2,0,0],colors.U,'U');
-  if(y===-1)sticker(new THREE.Vector3(0,-.482,0),[Math.PI/2,0,0],colors.D,'D');
-  if(z===1)sticker(new THREE.Vector3(0,0,.482),[0,0,0],colors.F,'F');
-  if(z===-1)sticker(new THREE.Vector3(0,0,-.482),[0,Math.PI,0],colors.B,'B');
+  if(x===1)sticker(new THREE.Vector3(0.485,0,0),[0,Math.PI/2,0],colors.R,'R');
+  if(x===-1)sticker(new THREE.Vector3(-0.485,0,0),[0,-Math.PI/2,0],colors.L,'L');
+  if(y===1)sticker(new THREE.Vector3(0,0.485,0),[-Math.PI/2,0,0],colors.U,'U');
+  if(y===-1)sticker(new THREE.Vector3(0,-0.485,0),[Math.PI/2,0,0],colors.D,'D');
+  if(z===1)sticker(new THREE.Vector3(0,0,0.485),[0,0,0],colors.F,'F');
+  if(z===-1)sticker(new THREE.Vector3(0,0,-0.485),[0,Math.PI,0],colors.B,'B');
   group.add(g);
   cubies.push(g);
  }
@@ -578,7 +558,7 @@ function turn(f,dir=1,onDone=null){
  let pivot=new THREE.Group();
  group.add(pivot); // Attach to group so coordinates stay unified
 
- let layer=cubies.filter(c=>Math.round(c.position[axis]/1.03)===sign);
+ let layer=cubies.filter(c=>Math.round(c.position[axis])===sign);
  layer.forEach(c=>pivot.attach(c));
 
  let start=performance.now(),angle=dir*Math.PI/2;
@@ -588,13 +568,13 @@ function turn(f,dir=1,onDone=null){
   if(t<1){
     requestAnimationFrame(tick);
   }else{
+    pivot.rotation[axis]=angle;
     pivot.updateMatrixWorld(true);
     layer.forEach(c=>{
-      group.attach(c); // Re-attach cubie back to group
-      ['x','y','z'].forEach(k=>{
-        c.position[k]=Math.round(c.position[k]/1.03)*1.03;
-        c.rotation[k]=Math.round(c.rotation[k]/(Math.PI/2))*(Math.PI/2);
-      });
+      group.attach(c); // Re-attach cubie back to group cleanly
+      c.position.x=Math.round(c.position.x);
+      c.position.y=Math.round(c.position.y);
+      c.position.z=Math.round(c.position.z);
     });
     group.remove(pivot);
     isTurning=false;
