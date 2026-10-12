@@ -9,6 +9,9 @@ The cube and Firebase Google sign-in now run together on Firebase Hosting at **h
 ## Features
 
 - Google sign-in UI powered by Firebase Authentication.
+- A signed-in game lobby with separate **Play** and **Play Guide** actions.
+- **Play** opens an immersive, UI-free cube view; the webcam feed remains off-screen and is used only for hand tracking. Press Esc to exit. Keyboard U/D/L/R/F/B selects the face, and pinch-drag turns it.
+- **Play Guide** opens the interactive tutorial before immersive play.
 - Interactive 3D 3×3 cube with six colored faces.
 - A live holographic 3D hand is rendered from MediaPipe’s 21 hand landmarks, with glowing joints, connected finger bones, and a translucent palm.
 - Open palm motion rotates the whole cube in real time with bounded, smoother movement.
