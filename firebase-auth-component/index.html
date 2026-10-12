@@ -35,17 +35,97 @@
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script><script>window.__FIREBASE_CONFIG__ = {"apiKey":"AIzaSyBjXqFHXQmtpPmZ9E9nkAPetmIr5oViZMo","authDomain":"virtualcube-571b7.firebaseapp.com","projectId":"virtualcube-571b7","storageBucket":"virtualcube-571b7.firebasestorage.app","messagingSenderId":"655864871830","appId":"1:655864871830:web:cb6d65bb5befc0cc6afbb7","measurementId":"G-VZZFXK8N2G"};</script><script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script><script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
-(()=>{const $=id=>document.getElementById(id);let scene,camera,renderer,group,cubies=[],face='U',last=null,webcamController=null;
-const colors={R:0xd94141,L:0xff8c38,U:0xf5f7fb,D:0xf4d83d,F:0x39bd83,B:0x3478ef},names={U:'Up',D:'Down',L:'Left',R:'Right',F:'Front',B:'Back'},mats={};
+(()=>{const $=id=>document.getElementById(id);let scene,camera,renderer,group,cubies=[],face='U',last=null,webcamController=null,handRig=null,handBones=null,handJoints=[],palmMesh=null,palmGeometry=null;
+
+const handConnections=[
+ [0,1],[1,2],[2,3],[3,4],
+ [0,5],[5,6],[6,7],[7,8],
+ [5,9],[9,10],[10,11],[11,12],
+ [9,13],[13,14],[14,15],[15,16],
+ [13,17],[17,18],[18,19],[19,20],
+ [0,17],[0,9]
+];
+const mat=c=>mats[c]||(mats[c]=new THREE.MeshStandardMaterial({color:c,roughness:.4}));
+function initVirtualHand(){
+ handRig=new THREE.Group();
+ handRig.name='Live holographic hand';
+ handRig.visible=false;
+ const bonePositions=new Float32Array(handConnections.length*2*3);
+ const boneGeometry=new THREE.BufferGeometry();
+ boneGeometry.setAttribute('position',new THREE.BufferAttribute(bonePositions,3));
+ const boneMaterial=new THREE.LineBasicMaterial({color:0x21b8c8,transparent:true,opacity:.95,depthTest:false});
+ handBones=new THREE.LineSegments(boneGeometry,boneMaterial);
+ handBones.renderOrder=20;
+ handRig.add(handBones);
+ palmGeometry=new THREE.BufferGeometry();
+ palmGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6*3),3));
+ palmGeometry.setIndex([0,1,2,0,2,3,0,3,4,0,4,5]);
+ const palmMaterial=new THREE.MeshBasicMaterial({color:0x7be9ed,transparent:true,opacity:.19,side:THREE.DoubleSide,depthTest:false,depthWrite:false});
+ palmMesh=new THREE.Mesh(palmGeometry,palmMaterial);
+ palmMesh.renderOrder=19;
+ handRig.add(palmMesh);
+ const jointGeometry=new THREE.SphereGeometry(.035,12,10);
+ for(let i=0;i<21;i++){
+   const isTip=[4,8,12,16,20].includes(i);
+   const jointMaterial=new THREE.MeshBasicMaterial({
+     color:isTip?0x7d9dff:0x62e5e7,
+     transparent:true,
+     opacity:isTip?.98:.88,
+     depthTest:false
+   });
+   const joint=new THREE.Mesh(jointGeometry,jointMaterial);
+   joint.scale.setScalar(isTip?1.35:1);
+   joint.renderOrder=21;
+   handRig.add(joint);
+   handJoints.push(joint);
+ }
+ scene.add(handRig);
+}
+function updateVirtualHand(landmarks){
+ if(!handRig||!camera||!landmarks){if(handRig)handRig.visible=false;return;}
+ handRig.visible=true;
+ const distance=4.2;
+ const viewHeight=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*distance;
+ const viewWidth=viewHeight*camera.aspect;
+ const direction=new THREE.Vector3();
+ camera.getWorldDirection(direction);
+ handRig.position.copy(camera.position).addScaledVector(direction,distance);
+ handRig.quaternion.copy(camera.quaternion);
+ const points=landmarks.map(p=>new THREE.Vector3(
+   (0.5-p.x)*viewWidth,
+   (0.5-p.y)*viewHeight,
+   -p.z*1.15
+ ));
+ points.forEach((p,i)=>handJoints[i].position.copy(p));
+ const boneAttr=handBones.geometry.attributes.position;
+ let offset=0;
+ handConnections.forEach(([a,b])=>{
+   const pa=points[a],pb=points[b];
+   boneAttr.array[offset++]=pa.x;boneAttr.array[offset++]=pa.y;boneAttr.array[offset++]=pa.z;
+   boneAttr.array[offset++]=pb.x;boneAttr.array[offset++]=pb.y;boneAttr.array[offset++]=pb.z;
+ });
+ boneAttr.needsUpdate=true;
+ palmGeometry.attributes.position.array.set([
+   points[0].x,points[0].y,points[0].z,
+   points[1].x,points[1].y,points[1].z,
+   points[5].x,points[5].y,points[5].z,
+   points[9].x,points[9].y,points[9].z,
+   points[13].x,points[13].y,points[13].z,
+   points[17].x,points[17].y,points[17].z
+ ]);
+ palmGeometry.attributes.position.needsUpdate=true;
+ palmGeometry.computeVertexNormals();
+}
+
 const mat=c=>mats[c]||(mats[c]=new THREE.MeshStandardMaterial({color:c,roughness:.4}));
 function build(){if(group)scene.remove(group);group=new THREE.Group();cubies=[];for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){let g=new THREE.Group();g.position.set(x*1.03,y*1.03,z*1.03);g.userData={x,y,z};g.add(new THREE.Mesh(new THREE.BoxGeometry(.96,.96,.96),mat(0x101827)));const sticker=(pos,rot,col)=>{let s=new THREE.Mesh(new THREE.PlaneGeometry(.78,.78),mat(col));s.position.copy(pos);s.rotation.set(...rot);g.add(s)};if(x===1)sticker(new THREE.Vector3(.486,0,0),[0,Math.PI/2,0],colors.R);if(x===-1)sticker(new THREE.Vector3(-.486,0,0),[0,-Math.PI/2,0],colors.L);if(y===1)sticker(new THREE.Vector3(0,.486,0),[-Math.PI/2,0,0],colors.U);if(y===-1)sticker(new THREE.Vector3(0,-.486,0),[Math.PI/2,0,0],colors.D);if(z===1)sticker(new THREE.Vector3(0,0,.486),[0,0,0],colors.F);if(z===-1)sticker(new THREE.Vector3(0,0,-.486),[0,Math.PI,0],colors.B);group.add(g);cubies.push(g)}scene.add(group)}
-function init(){scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1324);camera=new THREE.PerspectiveCamera(38,1,.1,100);camera.position.set(5.7,5,7.5);camera.lookAt(0,0,0);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;$('scene').appendChild(renderer.domElement);scene.add(new THREE.HemisphereLight(0xdce9ff,0x34415b,2));let l=new THREE.DirectionalLight(0xffffff,2.5);l.position.set(4,7,8);scene.add(l);build();resize();window.addEventListener('resize',resize);(function draw(){requestAnimationFrame(draw);renderer.render(scene,camera)})();$('status').textContent='3D scene ready'}
+function init(){scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1324);camera=new THREE.PerspectiveCamera(38,1,.1,100);camera.position.set(5.7,5,7.5);camera.lookAt(0,0,0);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;$('scene').appendChild(renderer.domElement);scene.add(new THREE.HemisphereLight(0xdce9ff,0x34415b,2));let l=new THREE.DirectionalLight(0xffffff,2.5);l.position.set(4,7,8);scene.add(l);build();initVirtualHand();resize();window.addEventListener('resize',resize);(function draw(){requestAnimationFrame(draw);if(handRig){const dir=new THREE.Vector3();camera.getWorldDirection(dir);handRig.position.copy(camera.position).addScaledVector(dir,4.2);handRig.quaternion.copy(camera.quaternion)}renderer.render(scene,camera)})();$('status').textContent='3D scene ready'}
 function resize(){if(!renderer)return;let w=$('scene').clientWidth,h=$('scene').clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h)}
 function turn(f,dir=1){let axis=['U','D'].includes(f)?'y':['L','R'].includes(f)?'x':'z',sign=['D','L','B'].includes(f)?-1:1;let pivot=new THREE.Group();scene.add(pivot);let layer=cubies.filter(c=>Math.round(c.position[axis]/1.03)===sign);layer.forEach(c=>pivot.attach(c));let start=performance.now(),angle=dir*Math.PI/2;function tick(now){let t=Math.min(1,(now-start)/220);pivot.rotation[axis]=angle*(t*t*(3-2*t));if(t<1)requestAnimationFrame(tick);else{pivot.updateMatrixWorld(true);layer.forEach(c=>{scene.attach(c);['x','y','z'].forEach(k=>{c.position[k]=Math.round(c.position[k]/1.03)*1.03;c.rotation[k]=Math.round(c.rotation[k]/(Math.PI/2))*(Math.PI/2)})});scene.remove(pivot)}}requestAnimationFrame(tick)}
 function choose(f){face=f;document.querySelectorAll('#faces button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));$('selected').textContent=f+' · '+names[f]}
 document.querySelectorAll('#faces button').forEach(b=>b.onclick=()=>choose(b.dataset.f));$('reset').onclick=()=>{camera.position.set(5.7,5,7.5);camera.lookAt(0,0,0);build();$('note').textContent='Cube restored to solved state.'};$('scramble').onclick=()=>{let n=0,fs=Object.keys(colors);function go(){turn(fs[Math.floor(Math.random()*6)],Math.random()>.5?1:-1);if(++n<12)setTimeout(go,260)}go()};
 const steps=[['Meet your cube','Allow camera access and hold one hand in view with your palm facing the camera.','✦'],['Orbit the whole cube','Spread your fingers into an open palm. Move your hand left/right or up/down to rotate the view.','↔'],['Turn one face','Select U, D, L, R, F, or B. Pinch thumb and index, then move sideways to turn that layer.','↻']];let si=0;function show(){let s=steps[si];$('num').textContent=(si+1)+' / 3';$('title').textContent=s[0];$('body').textContent=s[1];$('arrow').textContent=s[2];$('prev').disabled=si===0;$('next').textContent=si===2?'Got it ✓':'Next step →'}$('next').onclick=()=>{if(si<2){si++;show()}else $('guide').style.display='none'};$('prev').onclick=()=>{if(si){si--;show()}};$('hide').onclick=()=>$('guide').style.display='none';show();
-function results(r){let can=$('overlay'),ctx=can.getContext('2d');if(can.width!==can.clientWidth*2||can.height!==can.clientHeight*2){can.width=can.clientWidth*2;can.height=can.clientHeight*2}ctx.clearRect(0,0,can.width,can.height);let h=r.multiHandLandmarks&&r.multiHandLandmarks[0];if(!h){$('gesture').textContent='Waiting for hand';last=null;return}let p=h.map(v=>({x:v.x*can.width,y:v.y*can.height}));ctx.strokeStyle='#a7f3d0';ctx.lineWidth=3;[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]].forEach(a=>{ctx.beginPath();a.forEach((i,j)=>j?ctx.lineTo(p[i].x,p[i].y):ctx.moveTo(p[i].x,p[i].y));ctx.stroke()});p.forEach((v,i)=>{ctx.beginPath();ctx.fillStyle='#e7f0ff';ctx.arc(v.x,v.y,i===4||i===8?5:3,0,7);ctx.fill()});let pinch=Math.hypot(p[4].x-p[8].x,p[4].y-p[8].y)<can.width*.085,open=!pinch&&[8,12,16,20].every(i=>p[i].y<p[0].y+can.height*.12),c={x:(p[0].x+p[9].x)/2,y:(p[0].y+p[9].y)/2};if(pinch){$('gesture').textContent='PINCH · '+face+' FACE';if(last&&last.mode==='pinch'&&Math.abs(c.x-last.x)>can.width*.075){turn(face,c.x<last.x?1:-1);last={...c,mode:'pinch'}}else if(!last||last.mode!=='pinch')last={...c,mode:'pinch'}}else if(open){$('gesture').textContent='OPEN PALM · ROTATE';if(last&&last.mode==='open'){group.rotation.y+=(c.x-last.x)/can.width*5;group.rotation.x+=(c.y-last.y)/can.height*4}last={...c,mode:'open'}}else{$('gesture').textContent='HAND DETECTED';last=null}}
+function results(r){let can=$('overlay'),ctx=can.getContext('2d');if(can.width!==can.clientWidth*2||can.height!==can.clientHeight*2){can.width=can.clientWidth*2;can.height=can.clientHeight*2}ctx.clearRect(0,0,can.width,can.height);let h=r.multiHandLandmarks&&r.multiHandLandmarks[0];if(!h){$('gesture').textContent='Waiting for hand';last=null;if(handRig)handRig.visible=false;return}updateVirtualHand(h);let p=h.map(v=>({x:v.x*can.width,y:v.y*can.height}));ctx.strokeStyle='#a7f3d0';ctx.lineWidth=3;[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]].forEach(a=>{ctx.beginPath();a.forEach((i,j)=>j?ctx.lineTo(p[i].x,p[i].y):ctx.moveTo(p[i].x,p[i].y));ctx.stroke()});p.forEach((v,i)=>{ctx.beginPath();ctx.fillStyle='#e7f0ff';ctx.arc(v.x,v.y,i===4||i===8?5:3,0,7);ctx.fill()});let pinch=Math.hypot(p[4].x-p[8].x,p[4].y-p[8].y)<can.width*.085,open=!pinch&&[8,12,16,20].every(i=>p[i].y<p[0].y+can.height*.12),c={x:(p[0].x+p[9].x)/2,y:(p[0].y+p[9].y)/2};if(pinch){$('gesture').textContent='PINCH · '+face+' FACE';if(last&&last.mode==='pinch'&&Math.abs(c.x-last.x)>can.width*.075){turn(face,c.x<last.x?1:-1);last={...c,mode:'pinch'}}else if(!last||last.mode!=='pinch')last={...c,mode:'pinch'}}else if(open){$('gesture').textContent='OPEN PALM · ROTATE';if(last&&last.mode==='open'){group.rotation.y+=(c.x-last.x)/can.width*5;group.rotation.x+=(c.y-last.y)/can.height*4}last={...c,mode:'open'}}else{$('gesture').textContent='HAND DETECTED';last=null}}
 async function cameraStart(){try{let hands=new Hands({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f});hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.65,minTrackingConfidence:.55});hands.onResults(results);webcamController=new Camera($('video'),{onFrame:async()=>hands.send({image:$('video')}),width:640,height:480});await webcamController.start();$('status').textContent='Camera + hand tracking ready';$('note').textContent='Camera live. Hand landmarks are processed in your browser; video is not uploaded.'}catch(e){$('status').textContent='3D ready · camera unavailable';$('note').textContent='Camera error: '+e.message+'. Allow camera access and use localhost or HTTPS. Face buttons still work.'}}
 window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(webcamController)webcamController.stop();const v=$('video');if(v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}};window.addEventListener('virtual-cube-authenticated',()=>{cameraStart();window.dispatchEvent(new Event('resize'));});try{init()}catch(e){$('status').textContent='3D initialization failed: '+e.message}
 })();
@@ -226,6 +306,84 @@ body::after { width:320px; height:320px; right:-120px; bottom:4%; background:rgb
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
+</style>
+
+
+<style id="light-glass-morphism-theme">
+:root{color-scheme:light;--glass-ink:#1a2942;--glass-muted:#667791;--glass-edge:rgba(255,255,255,.78);--glass-cyan:#0b9eaf;--glass-blue:#547de7}
+html{background:#edf5ff}
+body{
+ position:relative;isolation:isolate;min-height:100vh;padding:clamp(8px,1.8vw,24px);overflow-x:hidden;
+ color:var(--glass-ink);
+ background:
+  radial-gradient(ellipse at 12% 10%,rgba(122,204,255,.36),transparent 36%),
+  radial-gradient(ellipse at 88% 13%,rgba(197,174,255,.3),transparent 34%),
+  radial-gradient(ellipse at 62% 100%,rgba(144,242,220,.28),transparent 40%),
+  linear-gradient(135deg,#f7fbff 0%,#edf5ff 48%,#f8f5ff 100%);
+}
+body::before,body::after{content:"";position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(54px);opacity:.48;animation:lightGlassFloat 18s ease-in-out infinite alternate}
+body::before{width:260px;height:260px;top:10%;left:-95px;background:rgba(81,186,255,.25)}
+body::after{width:320px;height:320px;right:-120px;bottom:2%;background:rgba(164,132,255,.2);animation-delay:-7s}
+@keyframes lightGlassFloat{from{transform:translate3d(0,0,0) scale(.94)}to{transform:translate3d(22px,-18px,0) scale(1.08)}}
+#auth-gate{
+ position:relative;min-height:min(680px,calc(100vh - 32px));padding:clamp(18px,4vw,48px);
+ overflow:hidden;isolation:isolate;border:1px solid rgba(255,255,255,.82);border-radius:30px;
+ background:linear-gradient(145deg,rgba(255,255,255,.66),rgba(255,255,255,.22));
+ -webkit-backdrop-filter:blur(22px) saturate(155%);backdrop-filter:blur(22px) saturate(155%);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 25px 70px rgba(105,139,180,.16);
+}
+#auth-gate::before{content:"";position:absolute;inset:8% 16%;z-index:-1;border-radius:50%;background:rgba(133,206,255,.22);filter:blur(65px);pointer-events:none}
+.auth-card{
+ position:relative;isolation:isolate;overflow:hidden;width:min(470px,100%);padding:clamp(26px,4vw,40px);
+ border:1px solid rgba(255,255,255,.94);border-radius:27px;text-align:center;
+ background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(255,255,255,.48) 48%,rgba(231,242,255,.58));
+ -webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%);
+ box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 rgba(255,255,255,.52),0 28px 70px rgba(103,135,180,.22),0 0 44px rgba(118,186,255,.12);
+ transform:perspective(1000px) rotateX(1deg);transition:transform .3s ease,box-shadow .3s ease;
+}
+.auth-card::before{content:"";position:absolute;z-index:-1;left:-20%;top:-58%;width:140%;height:100%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.95),transparent 74%);pointer-events:none}
+.auth-card:hover{transform:perspective(1000px) translateY(-3px) rotateX(0deg);box-shadow:inset 0 1px 0 #fff,0 34px 78px rgba(103,135,180,.25),0 0 35px rgba(74,172,242,.15)}
+.auth-mark{display:inline-grid;place-items:center;width:76px;height:76px;margin:0 auto 10px;border:1px solid rgba(255,255,255,.95);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(224,241,255,.56));box-shadow:inset 0 1px 0 #fff,0 12px 28px rgba(104,155,204,.2),0 0 24px rgba(96,196,239,.16)}
+.auth-card h2{color:#172b47;font-size:clamp(25px,3vw,31px);letter-spacing:-.045em;text-shadow:0 3px 15px rgba(255,255,255,.9)}
+.auth-card p{color:#61738e}
+.auth-google{position:relative;overflow:hidden;width:100%;margin-top:12px;padding:13px 16px;border:1px solid rgba(255,255,255,.96);border-radius:14px;background:linear-gradient(110deg,#fff,#edf5ff);color:#14243e;box-shadow:0 9px 24px rgba(102,132,170,.18),inset 0 1px 0 #fff;transition:transform .2s ease,box-shadow .2s ease}
+.auth-google:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(102,132,170,.23),0 0 18px rgba(66,184,211,.13)}
+#auth-signout{border:1px solid rgba(255,255,255,.9);border-radius:12px;background:rgba(235,244,255,.72);color:#213752;box-shadow:inset 0 1px 0 #fff,0 7px 18px rgba(97,129,166,.12)}
+.auth-note{color:#70819a!important}.auth-error{color:#be344f!important}
+#vc{
+ position:relative;border:1px solid rgba(255,255,255,.84);border-radius:25px;
+ background:linear-gradient(145deg,rgba(255,255,255,.72),rgba(244,249,255,.48)),rgba(236,245,255,.58);
+ -webkit-backdrop-filter:blur(26px) saturate(155%);backdrop-filter:blur(26px) saturate(155%);
+ color:#1c2e48;box-shadow:inset 0 1px 0 #fff,0 26px 75px rgba(103,136,180,.2);
+}
+.bar{background:linear-gradient(120deg,rgba(255,255,255,.8),rgba(235,245,255,.58));border-bottom:1px solid rgba(255,255,255,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.bar>span{color:#4f6582}
+#vc button{border:1px solid rgba(255,255,255,.98);border-radius:11px;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(224,238,255,.72));color:#304560;box-shadow:inset 0 1px 0 #fff,0 5px 13px rgba(91,125,165,.13);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+#vc button:hover:not(:disabled){transform:translateY(-2px);border-color:#7bdde2;box-shadow:0 8px 20px rgba(87,142,183,.18),0 0 18px rgba(73,199,210,.1)}
+#vc button.on,#vc #next{color:#14344a;border-color:rgba(255,255,255,.98);background:linear-gradient(135deg,#c0fbf0,#a8e2ff 60%,#d3dcff);box-shadow:inset 0 1px 0 #fff,0 5px 18px rgba(83,186,207,.24)}
+.stage{
+ background:
+  radial-gradient(ellipse at 50% 42%,rgba(159,218,255,.56),transparent 42%),
+  radial-gradient(ellipse at 12% 90%,rgba(192,233,255,.62),transparent 40%),
+  repeating-linear-gradient(0deg,rgba(80,126,175,.075) 0,rgba(80,126,175,.075) 1px,transparent 1px,transparent 36px),
+  repeating-linear-gradient(90deg,rgba(80,126,175,.075) 0,rgba(80,126,175,.075) 1px,transparent 1px,transparent 36px),
+  linear-gradient(135deg,#eff8ff,#e6f0ff 52%,#f1edff);
+}
+#scene{z-index:1}
+.hud,.cam,.guide{
+ border:1px solid rgba(255,255,255,.92);
+ background:linear-gradient(145deg,rgba(255,255,255,.87),rgba(255,255,255,.48)),rgba(246,251,255,.66);
+ color:#263b59;-webkit-backdrop-filter:blur(23px) saturate(150%);backdrop-filter:blur(23px) saturate(150%);
+ box-shadow:inset 0 1px 0 #fff,0 15px 34px rgba(82,117,159,.16);
+}
+.hud{border-radius:16px}.hud small,.guide small{color:#5e7898}.hud b{color:#2c405d}.hud b:last-child{color:#087f95}
+.cam{border-radius:16px;box-shadow:inset 0 1px 0 #fff,0 13px 29px rgba(77,112,153,.2)}.cam video,.cam canvas{border-radius:14px}
+.cam label{background:linear-gradient(90deg,rgba(236,248,255,.94),rgba(225,242,255,.82));border-top:1px solid rgba(255,255,255,.95);color:#087c8f;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.guide{border-radius:18px;box-shadow:inset 0 1px 0 #fff,0 18px 42px rgba(82,117,159,.18)}.guide h3{color:#203651}.guide p{color:#526b88}.guide .arrow{color:#0aa0b1;text-shadow:0 0 20px rgba(45,193,205,.28)}
+.foot{gap:1px;background:rgba(255,255,255,.84)}.foot div{background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(234,244,255,.63));-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}.foot b{color:#087f95}.foot span{color:#596e89}
+#note{background:rgba(242,248,255,.8);color:#5e7390;border-top:1px solid rgba(255,255,255,.95)}
+@media(max-width:650px){body{padding:6px}#auth-gate{min-height:calc(100vh - 12px);padding:14px;border-radius:22px}.auth-card{border-radius:22px;transform:none}.auth-card:hover{transform:none}#vc{border-radius:18px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 
 </body>
