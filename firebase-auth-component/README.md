@@ -1,5 +1,14 @@
-# Firebase auth component
+# Firebase Web Client (virtual_Cube)
 
-This page is hosted on Firebase Hosting, outside the Streamlit iframe. It signs in with Firebase Google Authentication and returns the Firebase ID token using Streamlit's component protocol. The Python app must verify this token with Firebase Admin before rendering the cube.
+This directory contains the production web client hosted on Firebase Hosting (`https://virtualcube-571b7.web.app`).
 
-Deploy from the repository root with Firebase CLI: `firebase deploy --only hosting`.
+It provides:
+- Firebase Google Authentication gate
+- 3D Rubik's Cube simulation powered by Three.js
+- Real-time client-side hand tracking with MediaPipe Hands
+- Holographic 3D skeletal hand mesh and interactive gesture controls
+
+Deploy changes from the repository root:
+```powershell
+firebase deploy --project virtualcube-571b7 --only hosting
+```

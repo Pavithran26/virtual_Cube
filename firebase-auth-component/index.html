@@ -50,31 +50,225 @@
 </div>
 
 <div id="vc">
- <div class="bar"><button id="back-to-lobby" title="Back to game menu">← Lobby</button><span id="status">Starting scene…</span><div id="faces"><button data-f="U" class="on">U ↑</button><button data-f="D">D ↓</button><button data-f="L">L ←</button><button data-f="R">R →</button><button data-f="F">F ●</button><button data-f="B">B ◌</button></div><button id="scramble">Scramble</button><button id="reset">Reset</button></div>
- <div class="stage"><div id="scene"></div><div class="hud"><small>GESTURE</small><b id="gesture">Waiting for hand</b><small>SELECTED FACE</small><b id="selected">U · Up</b></div>
- <!-- Hidden camera-processing elements: never render webcam footage or the user's face in the UI. -->
- <div id="camera-processing" aria-hidden="true"><video id="video" autoplay playsinline muted tabindex="-1"></video><canvas id="overlay" tabindex="-1"></canvas></div>
- <div class="guide" id="guide"><small>INTERACTIVE TUTORIAL · <span id="num">1 / 3</span></small><h3 id="title">Meet your cube</h3><p id="body">Allow camera access. Your camera feed stays hidden; only a live virtual hand is rendered from your hand landmarks.</p><div class="arrow" id="arrow">✦</div><div class="guidebtn"><button id="prev" disabled>← Back</button><button id="next">Next step →</button><button id="hide">Hide</button></div></div></div>
- <div class="foot"><div><b>01 · ROTATE</b><span>Open palm, move your hand to orbit.</span></div><div><b>02 · SELECT</b><span>Choose the face you want to turn.</span></div><div><b>03 · TURN</b><span>Pinch and drag sideways.</span></div></div><div id="note">Camera requires permission and localhost or HTTPS. Face buttons work without a camera.</div>
+ <div class="bar">
+  <button id="back-to-lobby" title="Back to game menu">← Lobby</button>
+  <span id="status">Starting scene…</span>
+  <div id="faces">
+   <button data-f="U" class="on">U ↑</button>
+   <button data-f="D">D ↓</button>
+   <button data-f="L">L ←</button>
+   <button data-f="R">R →</button>
+   <button data-f="F">F ●</button>
+   <button data-f="B">B ◌</button>
+  </div>
+  <div class="stats-group">
+   <span id="timer-display" class="stat-pill" title="Speedcube Stopwatch">⏱️ 00:00.00</span>
+   <span id="moves-display" class="stat-pill" title="Move counter">🎯 0 moves</span>
+   <span id="best-display" class="stat-pill" title="Personal Record">🏆 Best: --:--</span>
+  </div>
+  <button id="scramble">Scramble</button>
+  <button id="reset">Reset</button>
+  <button id="sound-btn" title="Toggle audio">🔊</button>
+ </div>
+ <div class="stage">
+  <div id="scene"></div>
+  <div class="hud">
+   <small>GESTURE</small><b id="gesture">Waiting for hand</b>
+   <small>SELECTED FACE</small><b id="selected">U · Up</b>
+  </div>
+  <div id="immersive-hud" class="immersive-hud">
+   <span id="hud-face">FACE: <b>U · Up</b></span>
+   <span id="hud-timer" class="hud-stat">⏱️ 00:00.00</span>
+   <span id="hud-moves" class="hud-stat">🎯 0 moves</span>
+   <button id="hud-sound-toggle" title="Toggle audio">🔊 Sound ON</button>
+   <span class="hud-tip">Tip: Press Esc to exit · Point to select · Drag to turn</span>
+  </div>
+  <div id="win-banner" class="win-banner" style="display:none">
+   <div class="win-card">
+    <div class="win-icon">🏆</div>
+    <h2>CUBE SOLVED!</h2>
+    <p id="win-details">Time: 00:00.00 · Moves: 0</p>
+    <div id="win-pr" class="win-pr">⭐ New Personal Record!</div>
+    <div class="win-actions">
+     <button id="win-scramble-again">Scramble Again ↻</button>
+     <button id="win-close">Keep Playing 🧊</button>
+    </div>
+   </div>
+  </div>
+  <!-- Hidden camera-processing elements: never render webcam footage or the user's face in the UI. -->
+  <div id="camera-processing" aria-hidden="true"><video id="video" autoplay playsinline muted tabindex="-1"></video></div>
+  <div class="guide" id="guide"><small>INTERACTIVE TUTORIAL · <span id="num">1 / 3</span></small><h3 id="title">Meet your cube</h3><p id="body">Allow camera access. Your camera feed stays hidden; only a live virtual hand is rendered from your hand landmarks.</p><div class="arrow" id="arrow">✦</div><div class="guidebtn"><button id="prev" disabled>← Back</button><button id="next">Next step →</button><button id="hide">Hide</button></div></div>
+ </div>
+ <div class="foot">
+  <div><b>01 · ROTATE</b><span>Open palm or background drag to orbit the cube.</span></div>
+  <div><b>02 · SELECT</b><span>Point index finger at face (or click face / press U/D/L/R/F/B).</span></div>
+  <div><b>03 · TURN</b><span>Pinch & drag in air, or click & drag directly on the 3D cube!</span></div>
+ </div>
+ <div id="note">Camera requires permission and localhost or HTTPS. Face buttons & mouse drag work without a camera.</div>
 </div>
 <style>
 #vc{background:#0a1020;border:1px solid #2b3b56;border-radius:18px;overflow:hidden;color:#edf4ff;font-family:system-ui,sans-serif}#vc *{box-sizing:border-box}
 #vc button{border:1px solid #344764;background:#17243b;color:#e1ebfb;border-radius:8px;padding:8px 11px;font-weight:650;font-size:12px;cursor:pointer}#vc button:hover{border-color:#a7f3d0}#vc button.on,#vc #next{background:#a7f3d0;color:#09241d;border-color:#a7f3d0}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px;background:#101a2d;border-bottom:1px solid #293a55;font-size:12px}.bar>span{color:#a8bddc;min-width:140px}#faces{display:flex;gap:5px;flex:1;justify-content:center}
+.stats-group{display:flex;align-items:center;gap:6px;margin:0 4px}
+.stat-pill{padding:5px 9px;border:1px solid rgba(255,255,255,.9);border-radius:8px;background:rgba(255,255,255,.65);color:#203854;font-size:11px;font-weight:700}
+.hud-stat{padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.8);color:#19304c;font-size:11px;font-weight:800}
 .stage{height:530px;position:relative;background:radial-gradient(ellipse at 50% 48%,#1a2b49,#0a1223 65%);overflow:hidden}#scene{position:absolute;inset:0}#scene canvas{width:100%;height:100%;display:block}
 .hud{position:absolute;top:16px;left:16px;z-index:2;background:#0b1425d9;border:1px solid #344966;border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:5px;min-width:125px}.hud small,.guide small{font:10px monospace;letter-spacing:.12em;color:#86a1ca}.hud b{font-size:13px;margin-bottom:8px}.hud b:last-child{color:#a7f3d0}
-.cam{position:absolute;right:14px;top:14px;width:165px;height:125px;background:#101a2c;border:1px solid #344966;border-radius:11px;overflow:hidden;z-index:3}.cam video,.cam canvas{position:absolute;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.cam label{position:absolute;bottom:0;background:#07101ddd;padding:4px 6px;width:100%;font:9px monospace;color:#a7f3d0}
 .guide{position:absolute;z-index:4;bottom:15px;left:15px;width:min(330px,calc(100% - 30px));padding:16px 17px 12px;background:#111d32f2;border:1px solid #405879;border-radius:14px;box-shadow:0 12px 40px #0006}.guide h3{font-size:19px;margin:8px 0 5px;letter-spacing:-.04em}.guide p{font-size:12px;line-height:1.5;color:#b1c1da;min-height:38px;margin:0}.arrow{position:absolute;right:18px;top:20px;font-size:24px;color:#a7f3d0}.guidebtn{display:flex;gap:6px;margin-top:13px;flex-wrap:wrap}.guidebtn button{font-size:10px!important;padding:7px 9px!important}
 .foot{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#293a55}.foot div{padding:14px;background:#101a2d;display:flex;flex-direction:column;gap:6px}.foot b{font:10px monospace;letter-spacing:.1em;color:#a7f3d0}.foot span{font-size:11px;color:#afc0da;line-height:1.4}#note{padding:9px 13px;background:#0b1424;color:#8da5c8;font-size:11px;border-top:1px solid #293a55}
-@media(max-width:650px){.stage{height:570px}#faces{order:3;flex-basis:100%;justify-content:flex-start}.cam{width:120px;height:90px}.foot{grid-template-columns:1fr}.foot div{padding:9px 13px}}
+.win-banner{position:absolute;inset:0;z-index:9999999;display:flex;align-items:center;justify-content:center;background:rgba(6,14,30,.65);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.win-card{width:min(420px,90%);padding:32px 24px;border:1px solid rgba(255,255,255,.9);border-radius:26px;text-align:center;background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(230,245,255,.85));box-shadow:0 30px 80px rgba(0,0,0,.35),inset 0 1px 0 #fff;color:#182e4b}
+.win-icon{font-size:48px;margin-bottom:8px}
+.win-card h2{margin:0 0 8px;font-size:28px;letter-spacing:-.04em;color:#102844}
+.win-card p{margin:0 0 12px;font-size:14px;color:#4f6b8c;font-weight:600}
+.win-pr{display:none;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#ffd700,#ffa500);color:#332200;font-size:11px;font-weight:800;margin:0 auto 18px;max-width:max-content}
+.win-actions{display:flex;gap:10px;justify-content:center}
+.win-actions button{padding:10px 18px;border-radius:12px;border:1px solid #fff;font-weight:700;font-size:12px;cursor:pointer}
+#win-scramble-again{background:linear-gradient(135deg,#247eb7,#587fdd);color:#fff}
+#win-close{background:rgba(255,255,255,.8);color:#244062}
+@media(max-width:650px){.stage{height:570px}#faces{order:3;flex-basis:100%;justify-content:flex-start}.stats-group{order:4;flex-basis:100%;justify-content:center;margin:6px 0}.foot{grid-template-columns:1fr}.foot div{padding:9px 13px}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script><script>window.__FIREBASE_CONFIG__ = {"apiKey":"AIzaSyBjXqFHXQmtpPmZ9E9nkAPetmIr5oViZMo","authDomain":"virtualcube-571b7.firebaseapp.com","projectId":"virtualcube-571b7","storageBucket":"virtualcube-571b7.firebasestorage.app","messagingSenderId":"655864871830","appId":"1:655864871830:web:cb6d65bb5befc0cc6afbb7","measurementId":"G-VZZFXK8N2G"};</script><script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script><script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
-(()=>{const $=id=>document.getElementById(id);let scene,camera,renderer,group,cubies=[],face='U',last=null,webcamController=null,handRig=null,handBones=null,handJoints=[],palmMesh=null,palmGeometry=null;
+(()=>{
+const $=id=>document.getElementById(id);
+let scene,camera,renderer,group,cubies=[],face='U',last=null,webcamController=null;
+let handRig=null,handBones=null,handJoints=[],palmMesh=null,palmGeometry=null;
+let isTurning=false,turnQueue=[];
+let audioCtx=null,soundEnabled=true;
+const raycaster=new THREE.Raycaster();
 
-const colors={R:0xd94141,L:0xff8c38,U:0xf5f7fb,D:0xf4d83d,F:0x39bd83,B:0x3478ef};
+// Speedcube Timer & Stats State
+let timerState='idle'; // 'idle', 'scrambled', 'running', 'solved'
+let timerStart=0,timerElapsed=0,timerInterval=null,movesCount=0;
+let bestTime=Number(localStorage.getItem('virtualCube_bestTime'))||null;
+
+function formatTime(ms){
+  const totalSec=Math.floor(ms/1000);
+  const m=Math.floor(totalSec/60);
+  const s=totalSec%60;
+  const cs=Math.floor((ms%1000)/10);
+  return (m<10?'0':'')+m+':'+(s<10?'0':'')+s+'.'+(cs<10?'0':'')+cs;
+}
+
+function updateDisplays(){
+  const tStr=formatTime(timerState==='running'?(performance.now()-timerStart):timerElapsed);
+  const mStr=movesCount+' move'+(movesCount===1?'':'s');
+  const tDisp=$('timer-display');if(tDisp)tDisp.textContent='⏱️ '+tStr;
+  const hTimer=$('hud-timer');if(hTimer)hTimer.textContent='⏱️ '+tStr;
+  const mDisp=$('moves-display');if(mDisp)mDisp.textContent='🎯 '+mStr;
+  const hMoves=$('hud-moves');if(hMoves)hMoves.textContent='🎯 '+movesCount;
+  const bDisp=$('best-display');
+  if(bDisp)bDisp.textContent='🏆 Best: '+(bestTime?formatTime(bestTime):'--:--');
+}
+
+function startTimer(){
+  timerState='running';
+  timerStart=performance.now();
+  if(timerInterval)clearInterval(timerInterval);
+  timerInterval=setInterval(updateDisplays,40);
+}
+
+function stopTimer(){
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  if(timerState==='running'){
+    timerElapsed=performance.now()-timerStart;
+  }
+}
+
+function resetTimer(){
+  stopTimer();
+  timerState='idle';
+  timerElapsed=0;
+  movesCount=0;
+  updateDisplays();
+}
+
+// Audio Engine: Native Web Audio API realistic plastic click & victory chime
+function initAudio(){
+  try{
+    if(!audioCtx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(AC) audioCtx=new AC();
+    }
+    if(audioCtx&&audioCtx.state==='suspended'){
+      audioCtx.resume();
+    }
+  }catch(e){}
+}
+window.initVirtualCubeAudio=initAudio;
+
+function playCubeTurnSound(){
+  if(!soundEnabled)return;
+  initAudio();
+  if(!audioCtx)return;
+  try{
+    const now=audioCtx.currentTime;
+    // 1. Friction burst
+    const bufferSize=Math.floor(audioCtx.sampleRate*0.045);
+    const noiseBuffer=audioCtx.createBuffer(1,bufferSize,audioCtx.sampleRate);
+    const output=noiseBuffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++){output[i]=Math.random()*2-1;}
+    const whiteNoise=audioCtx.createBufferSource();
+    whiteNoise.buffer=noiseBuffer;
+    const filter=audioCtx.createBiquadFilter();
+    filter.type='bandpass';
+    filter.frequency.setValueAtTime(1500+Math.random()*300,now);
+    filter.Q.setValueAtTime(2.2,now);
+    const noiseGain=audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.18,now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001,now+0.04);
+    whiteNoise.connect(filter);filter.connect(noiseGain);noiseGain.connect(audioCtx.destination);
+    whiteNoise.start(now);
+
+    // 2. Body resonance & magnetic snap click
+    const osc=audioCtx.createOscillator();
+    const oscGain=audioCtx.createGain();
+    osc.type='triangle';
+    const baseFreq=540+Math.random()*70;
+    osc.frequency.setValueAtTime(baseFreq,now);
+    osc.frequency.exponentialRampToValueAtTime(140,now+0.035);
+    oscGain.gain.setValueAtTime(0.25,now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001,now+0.038);
+    osc.connect(oscGain);oscGain.connect(audioCtx.destination);
+    osc.start(now);osc.stop(now+0.045);
+  }catch(e){}
+}
+
+function playVictorySound(){
+  if(!soundEnabled)return;
+  initAudio();
+  if(!audioCtx)return;
+  try{
+    const now=audioCtx.currentTime;
+    const notes=[523.25,659.25,783.99,1046.50];
+    notes.forEach((freq,idx)=>{
+      const osc=audioCtx.createOscillator();
+      const gain=audioCtx.createGain();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(freq,now+idx*0.11);
+      gain.gain.setValueAtTime(0,now+idx*0.11);
+      gain.gain.linearRampToValueAtTime(0.22,now+idx*0.11+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+idx*0.11+0.42);
+      osc.connect(gain);gain.connect(audioCtx.destination);
+      osc.start(now+idx*0.11);osc.stop(now+idx*0.11+0.45);
+    });
+  }catch(e){}
+}
+
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  if(soundEnabled)initAudio();
+  const label=soundEnabled?'🔊':'🔇';
+  const text=soundEnabled?'🔊 Sound ON':'🔇 Sound OFF';
+  const sBtn=$('sound-btn');if(sBtn)sBtn.textContent=label;
+  const hBtn=$('hud-sound-toggle');if(hBtn)hBtn.textContent=text;
+}
+
+// Authentic Speedcube Color Palette
+const colors={R:0xb71234,L:0xff5800,U:0xfafbfd,D:0xffd500,F:0x009b48,B:0x0046ad};
 const names={U:'Up',D:'Down',L:'Left',R:'Right',F:'Front',B:'Back'};
-const mats={};
 const handConnections=[
  [0,1],[1,2],[2,3],[3,4],
  [0,5],[5,6],[6,7],[7,8],
@@ -83,7 +277,68 @@ const handConnections=[
  [13,17],[17,18],[18,19],[19,20],
  [0,17],[0,9]
 ];
-const mat=c=>mats[c]||(mats[c]=new THREE.MeshStandardMaterial({color:c,roughness:.4}));
+
+// Rounded Cubie & Rounded Sticker Geometries
+function createRoundedCubieGeom(){
+  const w=0.94,h=0.94,d=0.94,r=0.045;
+  const shape=new THREE.Shape();
+  const hw=w/2-r,hh=h/2-r;
+  shape.moveTo(-hw,-hh-r);
+  shape.lineTo(hw,-hh-r);
+  shape.absarc(hw,-hh,r,-Math.PI/2,0,false);
+  shape.lineTo(hw+r,hh);
+  shape.absarc(hw,hh,r,0,Math.PI/2,false);
+  shape.lineTo(-hw,hh+r);
+  shape.absarc(-hw,hh,r,Math.PI/2,Math.PI,false);
+  shape.lineTo(-hw-r,-hh);
+  shape.absarc(-hw,-hh,r,Math.PI,Math.PI*1.5,false);
+  const geom=new THREE.ExtrudeGeometry(shape,{
+    depth:d-2*r,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:r,bevelThickness:r
+  });
+  geom.center();
+  return geom;
+}
+
+function createStickerGeom(){
+  const w=0.76,h=0.76,r=0.065;
+  const shape=new THREE.Shape();
+  const hw=w/2-r,hh=h/2-r;
+  shape.moveTo(-hw,-hh-r);
+  shape.lineTo(hw,-hh-r);
+  shape.absarc(hw,-hh,r,-Math.PI/2,0,false);
+  shape.lineTo(hw+r,hh);
+  shape.absarc(hw,hh,r,0,Math.PI/2,false);
+  shape.lineTo(-hw,hh+r);
+  shape.absarc(-hw,hh,r,Math.PI/2,Math.PI,false);
+  shape.lineTo(-hw-r,-hh);
+  shape.absarc(-hw,-hh,r,Math.PI,Math.PI*1.5,false);
+  return new THREE.ShapeGeometry(shape,12);
+}
+
+const cubieSharedGeom=createRoundedCubieGeom();
+const stickerSharedGeom=createStickerGeom();
+
+const coreMaterial=new THREE.MeshStandardMaterial({
+  color:0x12151b,
+  roughness:0.32,
+  metalness:0.06
+});
+
+const stickerMats={};
+const getStickerMat=c=>{
+  if(!stickerMats[c]){
+    stickerMats[c]=new THREE.MeshStandardMaterial({
+      color:c,
+      roughness:0.18,
+      metalness:0.02,
+      polygonOffset:true,
+      polygonOffsetFactor:-1,
+      polygonOffsetUnits:-1
+    });
+  }
+  return stickerMats[c];
+};
+
 function initVirtualHand(){
  handRig=new THREE.Group();
  handRig.name='Live holographic hand';
@@ -91,14 +346,14 @@ function initVirtualHand(){
  const bonePositions=new Float32Array(handConnections.length*2*3);
  const boneGeometry=new THREE.BufferGeometry();
  boneGeometry.setAttribute('position',new THREE.BufferAttribute(bonePositions,3));
- const boneMaterial=new THREE.LineBasicMaterial({color:0x21b8c8,transparent:true,opacity:.95,depthTest:false});
+ const boneMaterial=new THREE.LineBasicMaterial({color:0x21b8c8,transparent:true,opacity:.95,depthTest:true});
  handBones=new THREE.LineSegments(boneGeometry,boneMaterial);
  handBones.renderOrder=20;
  handRig.add(handBones);
  palmGeometry=new THREE.BufferGeometry();
  palmGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6*3),3));
  palmGeometry.setIndex([0,1,2,0,2,3,0,3,4,0,4,5]);
- const palmMaterial=new THREE.MeshBasicMaterial({color:0x7be9ed,transparent:true,opacity:.19,side:THREE.DoubleSide,depthTest:false,depthWrite:false});
+ const palmMaterial=new THREE.MeshBasicMaterial({color:0x7be9ed,transparent:true,opacity:.19,side:THREE.DoubleSide,depthTest:true,depthWrite:false});
  palmMesh=new THREE.Mesh(palmGeometry,palmMaterial);
  palmMesh.renderOrder=19;
  handRig.add(palmMesh);
@@ -108,8 +363,8 @@ function initVirtualHand(){
    const jointMaterial=new THREE.MeshBasicMaterial({
      color:isTip?0x7d9dff:0x62e5e7,
      transparent:true,
-     opacity:isTip ? .98 : .88,
-     depthTest:false
+     opacity:isTip?.98:.88,
+     depthTest:true
    });
    const joint=new THREE.Mesh(jointGeometry,jointMaterial);
    joint.scale.setScalar(isTip?1.35:1);
@@ -119,6 +374,7 @@ function initVirtualHand(){
  }
  scene.add(handRig);
 }
+
 function updateVirtualHand(landmarks){
  if(!handRig||!camera||!landmarks){if(handRig)handRig.visible=false;return;}
  handRig.visible=true;
@@ -155,13 +411,329 @@ function updateVirtualHand(landmarks){
  palmGeometry.computeVertexNormals();
 }
 
-function build(){if(group)scene.remove(group);group=new THREE.Group();cubies=[];for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){let g=new THREE.Group();g.position.set(x*1.03,y*1.03,z*1.03);g.userData={x,y,z};g.add(new THREE.Mesh(new THREE.BoxGeometry(.96,.96,.96),mat(0x101827)));const sticker=(pos,rot,col)=>{let s=new THREE.Mesh(new THREE.PlaneGeometry(.78,.78),mat(col));s.position.copy(pos);s.rotation.set(...rot);g.add(s)};if(x===1)sticker(new THREE.Vector3(.486,0,0),[0,Math.PI/2,0],colors.R);if(x===-1)sticker(new THREE.Vector3(-.486,0,0),[0,-Math.PI/2,0],colors.L);if(y===1)sticker(new THREE.Vector3(0,.486,0),[-Math.PI/2,0,0],colors.U);if(y===-1)sticker(new THREE.Vector3(0,-.486,0),[Math.PI/2,0,0],colors.D);if(z===1)sticker(new THREE.Vector3(0,0,.486),[0,0,0],colors.F);if(z===-1)sticker(new THREE.Vector3(0,0,-.486),[0,Math.PI,0],colors.B);group.add(g);cubies.push(g)}scene.add(group)}
-function init(){scene=new THREE.Scene();scene.background=null;camera=new THREE.PerspectiveCamera(38,1,.1,100);camera.position.set(5.7,5,7.5);camera.lookAt(0,0,0);renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setClearColor(0x000000,0);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;$('scene').appendChild(renderer.domElement);scene.add(new THREE.HemisphereLight(0xdce9ff,0x34415b,2));let l=new THREE.DirectionalLight(0xffffff,2.5);l.position.set(4,7,8);scene.add(l);build();initVirtualHand();resize();window.addEventListener('resize',resize);(function draw(){requestAnimationFrame(draw);if(handRig){const dir=new THREE.Vector3();camera.getWorldDirection(dir);handRig.position.copy(camera.position).addScaledVector(dir,4.2);handRig.quaternion.copy(camera.quaternion)}renderer.render(scene,camera)})();$('status').textContent='3D scene ready'}
-function resize(){if(!renderer)return;let w=$('scene').clientWidth,h=$('scene').clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h)}
-function turn(f,dir=1){let axis=['U','D'].includes(f)?'y':['L','R'].includes(f)?'x':'z',sign=['D','L','B'].includes(f)?-1:1;let pivot=new THREE.Group();scene.add(pivot);let layer=cubies.filter(c=>Math.round(c.position[axis]/1.03)===sign);layer.forEach(c=>pivot.attach(c));let start=performance.now(),angle=dir*Math.PI/2;function tick(now){let t=Math.min(1,(now-start)/220);pivot.rotation[axis]=angle*(t*t*(3-2*t));if(t<1)requestAnimationFrame(tick);else{pivot.updateMatrixWorld(true);layer.forEach(c=>{scene.attach(c);['x','y','z'].forEach(k=>{c.position[k]=Math.round(c.position[k]/1.03)*1.03;c.rotation[k]=Math.round(c.rotation[k]/(Math.PI/2))*(Math.PI/2)})});scene.remove(pivot)}}requestAnimationFrame(tick)}
-function choose(f){face=f;document.querySelectorAll('#faces button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));$('selected').textContent=f+' · '+names[f]}
-document.querySelectorAll('#faces button').forEach(b=>b.onclick=()=>choose(b.dataset.f));$('reset').onclick=()=>{camera.position.set(5.7,5,7.5);camera.lookAt(0,0,0);build();$('note').textContent='Cube restored to solved state.'};$('scramble').onclick=()=>{let n=0,fs=Object.keys(colors);function go(){turn(fs[Math.floor(Math.random()*6)],Math.random()>.5?1:-1);if(++n<12)setTimeout(go,260)}go()};
-const steps=[['Meet your cube','Allow camera access and hold one hand in view with your palm facing the camera.','✦'],['Orbit the whole cube','Spread your fingers into an open palm. Move your hand left/right or up/down to rotate the view.','↔'],['Turn one face','While playing, press U, D, L, R, F, or B on your keyboard to select a face. Pinch thumb and index, then move sideways to turn it.','↻']];let si=0;function show(){let s=steps[si];$('num').textContent=(si+1)+' / 3';$('title').textContent=s[0];$('body').textContent=s[1];$('arrow').textContent=s[2];$('prev').disabled=si===0;$('next').textContent=si===2?'Got it ✓':'Next step →'}$('next').onclick=()=>{if(si<2){si++;show()}else $('guide').style.display='none'};$('prev').onclick=()=>{if(si){si--;show()}};$('hide').onclick=()=>$('guide').style.display='none';show();
+function build(){
+ if(group)scene.remove(group);
+ group=new THREE.Group();
+ cubies=[];
+ for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
+  let g=new THREE.Group();
+  g.position.set(x*1.03,y*1.03,z*1.03);
+  g.userData={x,y,z};
+  const bodyMesh=new THREE.Mesh(cubieSharedGeom,coreMaterial);
+  g.add(bodyMesh);
+
+  const sticker=(pos,rot,col,faceKey)=>{
+    let s=new THREE.Mesh(stickerSharedGeom,getStickerMat(col));
+    s.position.copy(pos);
+    s.rotation.set(...rot);
+    s.userData={col,faceKey};
+    g.add(s);
+  };
+  if(x===1)sticker(new THREE.Vector3(.482,0,0),[0,Math.PI/2,0],colors.R,'R');
+  if(x===-1)sticker(new THREE.Vector3(-.482,0,0),[0,-Math.PI/2,0],colors.L,'L');
+  if(y===1)sticker(new THREE.Vector3(0,.482,0),[-Math.PI/2,0,0],colors.U,'U');
+  if(y===-1)sticker(new THREE.Vector3(0,-.482,0),[Math.PI/2,0,0],colors.D,'D');
+  if(z===1)sticker(new THREE.Vector3(0,0,.482),[0,0,0],colors.F,'F');
+  if(z===-1)sticker(new THREE.Vector3(0,0,-.482),[0,Math.PI,0],colors.B,'B');
+  group.add(g);
+  cubies.push(g);
+ }
+ scene.add(group);
+}
+
+// 100% Exact Solved State Checker for All 6 Faces
+function isCubeSolved(){
+ if(cubies.length!==27)return false;
+ group.updateMatrixWorld(true);
+ const invGroupMat=new THREE.Matrix4().copy(group.matrixWorld).invert();
+ const faceColors={U:[],D:[],L:[],R:[],F:[],B:[]};
+ for(const c of cubies){
+   for(const child of c.children){
+     if(child.userData&&child.userData.col!==undefined){
+       const worldNormal=new THREE.Vector3(0,0,1).transformDirection(child.matrixWorld);
+       const gn=worldNormal.transformDirection(invGroupMat);
+       if(gn.y>0.82)faceColors.U.push(child.userData.col);
+       else if(gn.y<-0.82)faceColors.D.push(child.userData.col);
+       else if(gn.x>0.82)faceColors.R.push(child.userData.col);
+       else if(gn.x<-0.82)faceColors.L.push(child.userData.col);
+       else if(gn.z>0.82)faceColors.F.push(child.userData.col);
+       else if(gn.z<-0.82)faceColors.B.push(child.userData.col);
+     }
+   }
+ }
+ for(const key of ['U','D','L','R','F','B']){
+   const list=faceColors[key];
+   if(list.length!==9)return false;
+   const firstCol=list[0];
+   if(!list.every(c=>c===firstCol))return false;
+ }
+ return true;
+}
+
+function checkSolved(){
+  if(timerState==='running'&&movesCount>0&&isCubeSolved()){
+    stopTimer();
+    timerState='solved';
+    playVictorySound();
+    const isNewPR=!bestTime||timerElapsed<bestTime;
+    if(isNewPR){
+      bestTime=timerElapsed;
+      localStorage.setItem('virtualCube_bestTime',bestTime);
+    }
+    updateDisplays();
+    $('win-details').textContent='Time: '+formatTime(timerElapsed)+' · '+movesCount+' moves';
+    $('win-pr').style.display=isNewPR?'inline-block':'none';
+    $('win-banner').style.display='flex';
+  }
+}
+
+function initContactShadow(){
+ const canvas=document.createElement('canvas');
+ canvas.width=256;canvas.height=256;
+ const ctx=canvas.getContext('2d');
+ const grad=ctx.createRadialGradient(128,128,15,128,128,118);
+ grad.addColorStop(0,'rgba(10,20,38,0.48)');
+ grad.addColorStop(0.45,'rgba(10,20,38,0.18)');
+ grad.addColorStop(1,'rgba(10,20,38,0)');
+ ctx.fillStyle=grad;
+ ctx.fillRect(0,0,256,256);
+ const tex=new THREE.CanvasTexture(canvas);
+ const shadowPlane=new THREE.Mesh(
+  new THREE.PlaneGeometry(5.4,5.4),
+  new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.75,depthWrite:false})
+ );
+ shadowPlane.rotation.x=-Math.PI/2;
+ shadowPlane.position.y=-2.35;
+ scene.add(shadowPlane);
+}
+
+function init(){
+ scene=new THREE.Scene();
+ scene.background=null;
+ camera=new THREE.PerspectiveCamera(38,1,.1,100);
+ camera.position.set(5.7,5,7.5);
+ camera.lookAt(0,0,0);
+ renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+ renderer.setClearColor(0x000000,0);
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ $('scene').appendChild(renderer.domElement);
+
+ // Multi-point studio lighting for realistic specular highlights
+ scene.add(new THREE.HemisphereLight(0xffffff,0x2b374d,1.8));
+ const keyLight=new THREE.DirectionalLight(0xffffff,2.8);
+ keyLight.position.set(5,8,7);
+ scene.add(keyLight);
+ const fillLight=new THREE.DirectionalLight(0xbad7ff,1.4);
+ fillLight.position.set(-6,-2,-5);
+ scene.add(fillLight);
+ const rimLight=new THREE.DirectionalLight(0x7fe3ff,1.5);
+ rimLight.position.set(-5,7,-6);
+ scene.add(rimLight);
+
+ initContactShadow();
+ build();
+ initVirtualHand();
+ initDirectInteraction();
+ resize();
+ updateDisplays();
+ window.addEventListener('resize',resize);
+ (function draw(){
+   requestAnimationFrame(draw);
+   if(handRig){
+     const dir=new THREE.Vector3();
+     camera.getWorldDirection(dir);
+     handRig.position.copy(camera.position).addScaledVector(dir,4.2);
+     handRig.quaternion.copy(camera.quaternion);
+   }
+   renderer.render(scene,camera);
+ })();
+ $('status').textContent='3D scene ready';
+}
+
+function resize(){
+ if(!renderer)return;
+ let w=$('scene').clientWidth,h=$('scene').clientHeight;
+ camera.aspect=w/h;
+ camera.updateProjectionMatrix;
+ renderer.setSize(w,h);
+}
+
+// Fixed 3D turn logic: Pivot attached to group, reattaches to group, turn queue, timer tracking
+function turn(f,dir=1,onDone=null){
+ if(isTurning){
+  turnQueue.push({f,dir,onDone});
+  return;
+ }
+ isTurning=true;
+ playCubeTurnSound();
+
+ // Start timer on first user move if cube was scrambled
+ if(timerState==='scrambled'){
+   startTimer();
+ }
+
+ let axis=['U','D'].includes(f)?'y':['L','R'].includes(f)?'x':'z',
+     sign=['D','L','B'].includes(f)?-1:1;
+ let pivot=new THREE.Group();
+ group.add(pivot); // Attach to group so coordinates stay unified
+
+ let layer=cubies.filter(c=>Math.round(c.position[axis]/1.03)===sign);
+ layer.forEach(c=>pivot.attach(c));
+
+ let start=performance.now(),angle=dir*Math.PI/2;
+ function tick(now){
+  let t=Math.min(1,(now-start)/200);
+  pivot.rotation[axis]=angle*(t*t*(3-2*t));
+  if(t<1){
+    requestAnimationFrame(tick);
+  }else{
+    pivot.updateMatrixWorld(true);
+    layer.forEach(c=>{
+      group.attach(c); // Re-attach cubie back to group
+      ['x','y','z'].forEach(k=>{
+        c.position[k]=Math.round(c.position[k]/1.03)*1.03;
+        c.rotation[k]=Math.round(c.rotation[k]/(Math.PI/2))*(Math.PI/2);
+      });
+    });
+    group.remove(pivot);
+    isTurning=false;
+
+    // Update move counters and check solve
+    if(timerState==='running'){
+      movesCount++;
+      updateDisplays();
+      checkSolved();
+    }
+
+    if(onDone)onDone();
+    if(turnQueue.length>0){
+      const next=turnQueue.shift();
+      turn(next.f,next.dir,next.onDone);
+    }
+  }
+ }
+ requestAnimationFrame(tick);
+}
+
+function choose(f){
+ face=f;
+ document.querySelectorAll('#faces button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
+ const text=f+' · '+names[f];
+ $('selected').textContent=text;
+ const hudF=$('hud-face');
+ if(hudF)hudF.innerHTML='FACE: <b>'+text+'</b>';
+}
+
+document.querySelectorAll('#faces button').forEach(b=>b.onclick=()=>{initAudio();choose(b.dataset.f);});
+$('sound-btn').onclick=toggleSound;
+$('hud-sound-toggle').onclick=toggleSound;
+
+$('reset').onclick=()=>{
+ initAudio();
+ turnQueue=[];
+ isTurning=false;
+ resetTimer();
+ camera.position.set(5.7,5,7.5);
+ camera.lookAt(0,0,0);
+ if(group)group.rotation.set(0,0,0);
+ build();
+ $('win-banner').style.display='none';
+ $('note').textContent='Cube restored to solved state.';
+};
+
+function runScramble(){
+ initAudio();
+ if(isTurning&&turnQueue.length>0)return;
+ resetTimer();
+ timerState='scrambled';
+ $('win-banner').style.display='none';
+ const fs=Object.keys(colors);
+ for(let i=0;i<14;i++){
+   turn(fs[Math.floor(Math.random()*6)],Math.random()>.5?1:-1);
+ }
+ $('note').textContent='Cube scrambled! Timer starts on your first move.';
+ updateDisplays();
+}
+
+$('scramble').onclick=runScramble;
+$('win-scramble-again').onclick=()=>{
+  $('win-banner').style.display='none';
+  runScramble();
+};
+$('win-close').onclick=()=>{
+  $('win-banner').style.display='none';
+};
+
+// Direct Mouse / Touch Dragging on 3D Cube Canvas
+function initDirectInteraction(){
+ const dom=renderer.domElement;
+ let dragData=null,orbitData=null;
+
+ dom.addEventListener('pointerdown',e=>{
+   initAudio();
+   const rect=dom.getBoundingClientRect();
+   const mouseX=((e.clientX-rect.left)/rect.width)*2-1;
+   const mouseY=-(((e.clientY-rect.top)/rect.height)*2-1);
+   raycaster.setFromCamera({x:mouseX,y:mouseY},camera);
+   const hits=raycaster.intersectObjects(cubies,true);
+
+   if(hits.length>0&&hits[0].face){
+     const hit=hits[0];
+     const wn=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+     const invG=new THREE.Matrix4().copy(group.matrixWorld).invert();
+     const ln=wn.clone().transformDirection(invG);
+     const ax=Math.abs(ln.x),ay=Math.abs(ln.y),az=Math.abs(ln.z);
+     let touched=null;
+     if(ay>ax&&ay>az)touched=ln.y>0?'U':'D';
+     else if(ax>ay&&ax>az)touched=ln.x>0?'R':'L';
+     else touched=ln.z>0?'F':'B';
+
+     if(touched)choose(touched);
+     dragData={startX:e.clientX,startY:e.clientY,face:touched};
+   }else{
+     orbitData={startX:e.clientX,startY:e.clientY,rotX:group.rotation.x,rotY:group.rotation.y};
+   }
+ });
+
+ window.addEventListener('pointermove',e=>{
+   if(dragData){
+     const dx=e.clientX-dragData.startX,dy=e.clientY-dragData.startY;
+     if(Math.hypot(dx,dy)>32){
+       turn(dragData.face,dx>0?1:-1);
+       dragData=null;
+     }
+   }else if(orbitData){
+     const dx=e.clientX-orbitData.startX,dy=e.clientY-orbitData.startY;
+     group.rotation.y=orbitData.rotY+dx*0.007;
+     group.rotation.x=THREE.MathUtils.clamp(orbitData.rotX+dy*0.007,-1.25,1.25);
+   }
+ });
+
+ window.addEventListener('pointerup',()=>{dragData=null;orbitData=null;});
+ window.addEventListener('pointercancel',()=>{dragData=null;orbitData=null;});
+}
+
+const steps=[
+ ['Meet your cube','Allow camera access and hold one hand in view with your palm facing the camera.','✦'],
+ ['Orbit the whole cube','Spread your fingers into an open palm. Move your hand left/right or up/down to rotate the view.','↔'],
+ ['Point to select, pinch to turn','Point your index finger at any cube face to select it. Pinch thumb & index, then drag sideways to turn it! (Mouse/Touch & Keyboard U/D/L/R/F/B also work)','↻']
+];
+let si=0;
+function show(){
+ let s=steps[si];
+ $('num').textContent=(si+1)+' / 3';
+ $('title').textContent=s[0];
+ $('body').textContent=s[1];
+ $('arrow').textContent=s[2];
+ $('prev').disabled=si===0;
+ $('next').textContent=si===2?'Got it ✓':'Next step →';
+}
+$('next').onclick=()=>{initAudio();if(si<2){si++;show();}else $('guide').style.display='none';};
+$('prev').onclick=()=>{initAudio();if(si){si--;show();}};
+$('hide').onclick=()=>{initAudio();$('guide').style.display='none';};
+show();
+
 function results(r){
  const h=r.multiHandLandmarks&&r.multiHandLandmarks[0];
  if(!h){
@@ -171,13 +743,35 @@ function results(r){
   return;
  }
  updateVirtualHand(h);
- // Normalized 0..1 coordinates keep interaction working while the webcam preview is hidden.
- const pinch=Math.hypot(h[4].x-h[8].x,h[4].y-h[8].y)<.085;
+
+ // Direct 3D Raycasting with index fingertip (landmark 8)
+ const screenX=(1.0-h[8].x)*2-1;
+ const screenY=-(h[8].y*2-1);
+ raycaster.setFromCamera({x:screenX,y:screenY},camera);
+ const hits=raycaster.intersectObjects(cubies,true);
+ if(hits.length>0&&hits[0].face){
+   const hit=hits[0];
+   const worldNormal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+   const invGroup=new THREE.Matrix4().copy(group.matrixWorld).invert();
+   const localNormal=worldNormal.clone().transformDirection(invGroup);
+   const ax=Math.abs(localNormal.x),ay=Math.abs(localNormal.y),az=Math.abs(localNormal.z);
+   let touchedFace=null;
+   if(ay>ax&&ay>az)touchedFace=localNormal.y>0?'U':'D';
+   else if(ax>ay&&ax>az)touchedFace=localNormal.x>0?'R':'L';
+   else touchedFace=localNormal.z>0?'F':'B';
+
+   if(touchedFace&&touchedFace!==face){
+     choose(touchedFace);
+   }
+ }
+
+ const pinch=Math.hypot(h[4].x-h[8].x,h[4].y-h[8].y)<.082;
  const open=!pinch&&[8,12,16,20].every(i=>h[i].y<h[0].y+.12);
  const c={x:(h[0].x+h[9].x)/2,y:(h[0].y+h[9].y)/2};
+
  if(pinch){
   $('gesture').textContent='PINCH · '+face+' FACE';
-  if(last&&last.mode==='pinch'&&Math.abs(c.x-last.x)>.075){
+  if(last&&last.mode==='pinch'&&Math.abs(c.x-last.x)>.062){
    turn(face,c.x<last.x?1:-1);
    last={...c,mode:'pinch'};
   }else if(!last||last.mode!=='pinch')last={...c,mode:'pinch'};
@@ -190,13 +784,41 @@ function results(r){
   }
   last={...c,mode:'open'};
  }else{
-  $('gesture').textContent='HAND DETECTED';
+  $('gesture').textContent='POINT / HOVER';
   last=null;
  }
 }
-async function cameraStart(){try{let hands=new Hands({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f});hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.65,minTrackingConfidence:.55});hands.onResults(results);webcamController=new Camera($('video'),{onFrame:async()=>hands.send({image:$('video')}),width:640,height:480});await webcamController.start();$('status').textContent='Camera + hand tracking ready';$('note').textContent='Camera live. Hand landmarks are processed in your browser; video is not uploaded.'}catch(e){$('status').textContent='3D ready · camera unavailable';$('note').textContent='Camera error: '+e.message+'. Allow camera access and use localhost or HTTPS. Face buttons still work.'}}
-window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(webcamController)webcamController.stop();const v=$('video');if(v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}};window.addEventListener('virtual-cube-authenticated',()=>{cameraStart();window.dispatchEvent(new Event('resize'));});try{init()}catch(e){$('status').textContent='3D initialization failed: '+e.message}
+
+async function cameraStart(){
+ try{
+  let hands=new Hands({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f});
+  hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.65,minTrackingConfidence:.55});
+  hands.onResults(results);
+  webcamController=new Camera($('video'),{onFrame:async()=>hands.send({image:$('video')}),width:640,height:480});
+  await webcamController.start();
+  $('status').textContent='Camera + hand tracking ready';
+  $('note').textContent='Camera live. Hand landmarks are processed in your browser; video is not uploaded.';
+ }catch(e){
+  $('status').textContent='3D ready · camera unavailable';
+  $('note').textContent='Camera error: '+e.message+'. Allow camera access and use localhost or HTTPS. Face buttons still work.';
+ }
+}
+window.startVirtualCubeCamera=cameraStart;
+window.stopVirtualCubeCamera=()=>{
+ if(webcamController)webcamController.stop();
+ const v=$('video');
+ if(v.srcObject){
+  v.srcObject.getTracks().forEach(t=>t.stop());
+  v.srcObject=null;
+ }
+};
+window.addEventListener('virtual-cube-authenticated',()=>{
+ cameraStart();
+ window.dispatchEvent(new Event('resize'));
+});
+try{init();}catch(e){$('status').textContent='3D initialization failed: '+e.message;}
 })();
+
 </script>
 
 <script>
@@ -586,7 +1208,6 @@ body::after{width:320px;height:320px;right:-120px;bottom:2%;background:rgba(164,
 .cube-front i:nth-child(1),.cube-front i:nth-child(2),.cube-front i:nth-child(3),.cube-front i:nth-child(4),.cube-front i:nth-child(6){background:linear-gradient(145deg,#b6f6ec,#52c9c9)}.cube-front i:nth-child(5),.cube-front i:nth-child(7),.cube-front i:nth-child(8),.cube-front i:nth-child(9){background:linear-gradient(145deg,#8fb6ff,#5d81e8)}.cube-right i{background:linear-gradient(145deg,#d5c6ff,#9682e7)}.cube-top i{background:linear-gradient(145deg,#fff,#dcecff)}
 .visual-label{position:absolute;display:flex;flex-direction:column;gap:5px;padding:11px 13px;border:1px solid rgba(255,255,255,.9);border-radius:14px;background:rgba(255,255,255,.68);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 10px 24px rgba(84,120,164,.13);font-size:8px;letter-spacing:.12em;color:#7a8ba5}.visual-label b{font-size:10px;color:#287b91;letter-spacing:.04em}.label-one{top:7%;right:0}.label-two{bottom:10%;left:0}
 .lobby-bottom{justify-content:space-between;flex-wrap:wrap;padding-top:15px;border-top:1px solid rgba(255,255,255,.8);color:#8394ad;font-size:8px;font-weight:800;letter-spacing:.12em}
-#vc .cam{position:fixed!important;left:-2000px!important;top:0!important;width:640px!important;height:480px!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;z-index:-10!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
 #vc.is-guide .stage{height:560px}
 #vc.is-playing{position:fixed!important;inset:0!important;z-index:99999!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:radial-gradient(ellipse at 50% 44%,rgba(177,224,255,.3),transparent 48%),linear-gradient(135deg,#eff8ff,#e8f1ff 58%,#f4efff)!important;box-shadow:none!important}
 #vc.is-playing .bar,#vc.is-playing .hud,#vc.is-playing .guide,#vc.is-playing .foot,#vc.is-playing #note{display:none!important}
@@ -595,6 +1216,27 @@ body::after{width:320px;height:320px;right:-120px;bottom:2%;background:rgba(164,
 body.play-mode{padding:0!important;overflow:hidden!important}body.play-mode #lobby,body.play-mode #auth-gate{display:none!important}body.guide-mode{padding:clamp(6px,1.5vw,20px)}
 @media(max-width:900px){.lobby-hero{grid-template-columns:1fr;gap:10px}.lobby-visual{min-height:280px;order:-1}.visual-cube{scale:.9}.ring-one{width:290px;height:290px}.ring-two{width:230px;height:230px}.lobby-copy h1{font-size:clamp(38px,8vw,62px)}.label-one{right:2%;top:3%}.label-two{left:3%;bottom:3%}}
 @media(max-width:560px){#lobby{padding:16px;min-height:calc(100vh - 12px);gap:22px;border-radius:22px}.lobby-status{display:none}.lobby-brand{font-size:15px}.lobby-visual{min-height:235px}.visual-cube{scale:.75}.lobby-actions{grid-template-columns:1fr}.lobby-bottom{gap:10px}#vc.is-playing{width:100vw!important}}
+
+/* Immersive mode floating HUD */
+.immersive-hud{
+ display:none;position:absolute;top:18px;left:50%;transform:translateX(-50%);
+ z-index:999999;align-items:center;gap:12px;padding:8px 18px;
+ border:1px solid rgba(255,255,255,.88);border-radius:999px;
+ background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(235,245,255,.7));
+ -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+ color:#1d3150;font-size:12px;font-weight:700;
+ box-shadow:0 12px 30px rgba(80,120,165,.18),inset 0 1px 0 #fff;
+}
+.immersive-hud b{color:#087f95}
+.immersive-hud button{
+ border:1px solid rgba(255,255,255,.95);border-radius:999px;
+ background:rgba(255,255,255,.8);padding:4px 10px;font-size:11px;font-weight:700;
+ cursor:pointer;color:#244062;transition:background .2s ease;
+}
+.immersive-hud button:hover{background:#fff;border-color:#7bdde2}
+.hud-tip{font-size:11px;color:#677d9c;font-weight:500}
+#vc.is-playing .immersive-hud{display:flex!important}
+@media(max-width:700px){.hud-tip{display:none}}
 
 /* Privacy hardening: capture frames for MediaPipe only, never display the live camera. */
 #camera-processing{
@@ -605,7 +1247,7 @@ body.play-mode{padding:0!important;overflow:hidden!important}body.play-mode #lob
  pointer-events:none!important;z-index:-2147483647!important;
  contain:strict!important;
 }
-#camera-processing video,#camera-processing canvas{
+#camera-processing video{
  position:absolute!important;left:0!important;top:0!important;
  width:1px!important;height:1px!important;
  max-width:1px!important;max-height:1px!important;
