@@ -37,7 +37,10 @@ if not isinstance(firebase_id_token, str) or not firebase_id_token:
     st.stop()
 
 verified_user = None
-admin_secret = st.secrets.get("firebase_admin") if "firebase_admin" in st.secrets else None
+try:
+    admin_secret = st.secrets.get("firebase_admin")
+except Exception:
+    admin_secret = None
 if admin_secret:
     try:
         import firebase_admin
