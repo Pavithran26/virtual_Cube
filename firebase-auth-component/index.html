@@ -100,9 +100,9 @@
   <div class="guide" id="guide"><small>INTERACTIVE TUTORIAL · <span id="num">1 / 3</span></small><h3 id="title">Meet your cube</h3><p id="body">Allow camera access. Your camera feed stays hidden; only a live virtual hand is rendered from your hand landmarks.</p><div class="arrow" id="arrow">✦</div><div class="guidebtn"><button id="prev" disabled>← Back</button><button id="next">Next step →</button><button id="hide">Hide</button></div></div>
  </div>
  <div class="foot">
-  <div><b>01 · ROTATE</b><span>Open palm or background drag to orbit the cube.</span></div>
-  <div><b>02 · SELECT</b><span>Point index finger at face (or click face / press U/D/L/R/F/B).</span></div>
-  <div><b>03 · TURN</b><span>Pinch & drag in air, or click & drag directly on the 3D cube!</span></div>
+  <div><b>01 · SINGLE-AXIS ROTATE</b><span>Open palm or drag canvas to orbit horizontally or vertically (1 axis at a time).</span></div>
+  <div><b>02 · TWO-HAND SPEEDCUBING</b><span>Orbit with one hand while pointing & pinch-turning layers with your other hand!</span></div>
+  <div><b>03 · PINCH OR DRAG TO TURN</b><span>Pinch & flick in air, or click & drag directly on the 3D cube stickers.</span></div>
  </div>
  <div id="note">Camera requires permission and localhost or HTTPS. Face buttons & mouse drag work without a camera.</div>
 </div>
@@ -640,7 +640,7 @@ function initDirectInteraction(){
      if(touched)choose(touched);
      dragData={startX:e.clientX,startY:e.clientY,face:touched};
    }else{
-     orbitData={startX:e.clientX,startY:e.clientY,rotX:group.rotation.x,rotY:group.rotation.y};
+     orbitData={startX:e.clientX,startY:e.clientY,rotX:group.rotation.x,rotY:group.rotation.y,lockAxis:null};
    }
  });
 
@@ -653,8 +653,15 @@ function initDirectInteraction(){
      }
    }else if(orbitData){
      const dx=e.clientX-orbitData.startX,dy=e.clientY-orbitData.startY;
-     group.rotation.y=orbitData.rotY+dx*0.007;
-     group.rotation.x=THREE.MathUtils.clamp(orbitData.rotX+dy*0.007,-1.25,1.25);
+     // Single-Axis Dominant Rotation Lock: only 1 axis turns at any one time
+     if(!orbitData.lockAxis&&Math.hypot(dx,dy)>5){
+       orbitData.lockAxis=Math.abs(dx)>=Math.abs(dy)?'y':'x';
+     }
+     if(orbitData.lockAxis==='y'){
+       group.rotation.y=orbitData.rotY+dx*0.007;
+     }else if(orbitData.lockAxis==='x'){
+       group.rotation.x=THREE.MathUtils.clamp(orbitData.rotX+dy*0.007,-1.25,1.25);
+     }
    }
  });
 
@@ -663,9 +670,9 @@ function initDirectInteraction(){
 }
 
 const steps=[
- ['Meet your cube','Allow camera access and hold one hand in view with your palm facing the camera.','✦'],
- ['Orbit the whole cube','Spread your fingers into an open palm. Move your hand left/right or up/down to rotate the view.','↔'],
- ['Point to select, pinch to turn','Point your index finger at any cube face to select it. Pinch thumb & index, then drag sideways to turn it! (Mouse/Touch & Keyboard U/D/L/R/F/B also work)','↻']
+ ['Meet your cube','Allow camera access and hold one or both hands in view. Your camera feed stays hidden; only gesture controls are tracked.','✦'],
+ ['Single-axis rotation','Hold an open palm or drag the canvas to smoothly orbit horizontally or vertically (1 axis at a time, just like an authentic speedcube).','↔'],
+ ['Two-hand speedcubing','Use one hand to hold & orbit the cube, and your other hand to point and pinch-turn layers! Mouse & touch drag also work.','↻']
 ];
 let si=0;
 function show(){
@@ -683,72 +690,126 @@ $('hide').onclick=()=>{initAudio();$('guide').style.display='none';};
 show();
 
 function results(r){
- const h=r.multiHandLandmarks&&r.multiHandLandmarks[0];
- if(!h){
+ const handsList=r.multiHandLandmarks||[];
+ if(handsList.length===0){
   $('gesture').textContent='Waiting for hand';
   last=null;
   if(handRig)handRig.visible=false;
   return;
  }
- updateVirtualHand(h);
 
- // Direct 3D Raycasting with index fingertip (landmark 8)
- const screenX=(1.0-h[8].x)*2-1;
- const screenY=-(h[8].y*2-1);
- raycaster.setFromCamera({x:screenX,y:screenY},camera);
- const hits=raycaster.intersectObjects(cubies,true);
- if(hits.length>0&&hits[0].face){
-   const hit=hits[0];
-   const worldNormal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-   const invGroup=new THREE.Matrix4().copy(group.matrixWorld).invert();
-   const localNormal=worldNormal.clone().transformDirection(invGroup);
-   const ax=Math.abs(localNormal.x),ay=Math.abs(localNormal.y),az=Math.abs(localNormal.z);
-   let touchedFace=null;
-   if(ay>ax&&ay>az)touchedFace=localNormal.y>0?'U':'D';
-   else if(ax>ay&&ax>az)touchedFace=localNormal.x>0?'R':'L';
-   else touchedFace=localNormal.z>0?'F':'B';
+ if(handRig)handRig.visible=false;
 
-   if(touchedFace&&touchedFace!==face){
-     choose(touchedFace);
+ // Parse up to 2 detected hands for dual-handed speedcubing
+ const parsedHands=handsList.map((h,idx)=>{
+   const pinch=Math.hypot(h[4].x-h[8].x,h[4].y-h[8].y)<0.082;
+   const open=!pinch&&[8,12,16,20].every(i=>h[i].y<h[0].y+0.12);
+   const c={x:(h[0].x+h[9].x)/2,y:(h[0].y+h[9].y)/2};
+   const screenX=(1.0-h[8].x)*2-1;
+   const screenY=-(h[8].y*2-1);
+   return {h,pinch,open,c,screenX,screenY,idx};
+ });
+
+ // 1. Direct 3D Raycasting with pointing index fingertip
+ for(const ph of parsedHands){
+   if(!ph.pinch){
+     raycaster.setFromCamera({x:ph.screenX,y:ph.screenY},camera);
+     const hits=raycaster.intersectObjects(cubies,true);
+     if(hits.length>0&&hits[0].face){
+       const hit=hits[0];
+       const worldNormal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+       const invGroup=new THREE.Matrix4().copy(group.matrixWorld).invert();
+       const localNormal=worldNormal.clone().transformDirection(invGroup);
+       const ax=Math.abs(localNormal.x),ay=Math.abs(localNormal.y),az=Math.abs(localNormal.z);
+       let touchedFace=null;
+       if(ay>ax&&ay>az)touchedFace=localNormal.y>0?'U':'D';
+       else if(ax>ay&&ax>az)touchedFace=localNormal.x>0?'R':'L';
+       else touchedFace=localNormal.z>0?'F':'B';
+
+       if(touchedFace&&touchedFace!==face){
+         choose(touchedFace);
+       }
+     }
    }
  }
 
- const pinch=Math.hypot(h[4].x-h[8].x,h[4].y-h[8].y)<.082;
- const open=!pinch&&[8,12,16,20].every(i=>h[i].y<h[0].y+.12);
- const c={x:(h[0].x+h[9].x)/2,y:(h[0].y+h[9].y)/2};
+ const orbitHand=parsedHands.find(ph=>ph.open);
+ const pinchHand=parsedHands.find(ph=>ph.pinch);
 
- if(pinch){
-  $('gesture').textContent='PINCH · '+face+' FACE';
-  if(last&&last.mode==='pinch'&&Math.abs(c.x-last.x)>.062){
-   turn(face,c.x<last.x?1:-1);
-   last={...c,mode:'pinch'};
-  }else if(!last||last.mode!=='pinch')last={...c,mode:'pinch'};
- }else if(open){
-  $('gesture').textContent='OPEN PALM · ROTATE';
-  if(last&&last.mode==='open'){
-   const dx=c.x-last.x,dy=c.y-last.y;
-   group.rotation.y+=THREE.MathUtils.clamp(dx*5,-.18,.18);
-   group.rotation.x=THREE.MathUtils.clamp(group.rotation.x+dy*4,-1.25,1.25);
-  }
-  last={...c,mode:'open'};
+ // 2. Single-Axis Dominant Rotation Lock (oru time la oru angela mattum dhan thirumbanum)
+ if(orbitHand){
+   const c=orbitHand.c;
+   if(last&&last.mode==='open'&&last.handIdx===orbitHand.idx){
+     const dx=c.x-last.x,dy=c.y-last.y;
+     const absDx=Math.abs(dx),absDy=Math.abs(dy);
+     if(absDx>0.003||absDy>0.003){
+       let lockAxis=last.lockAxis;
+       if(!lockAxis){
+         lockAxis=absDx>=absDy?'y':'x';
+       }
+       if(lockAxis==='y'){
+         group.rotation.y+=THREE.MathUtils.clamp(dx*5.5,-.20,.20);
+       }else{
+         group.rotation.x=THREE.MathUtils.clamp(group.rotation.x+dy*4.5,-1.25,1.25);
+       }
+       last={...c,mode:'open',lockAxis,handIdx:orbitHand.idx};
+     }else{
+       last={...c,mode:'open',lockAxis:null,handIdx:orbitHand.idx};
+     }
+   }else{
+     last={...c,mode:'open',lockAxis:null,handIdx:orbitHand.idx};
+   }
+ }
+
+ // 3. Pinch & Turn
+ if(pinchHand){
+   const c=pinchHand.c;
+   if(last&&last.mode==='pinch'&&last.handIdx===pinchHand.idx&&Math.abs(c.x-last.x)>0.062){
+     turn(face,c.x<last.x?1:-1);
+     last={...c,mode:'pinch',handIdx:pinchHand.idx};
+   }else if(!last||last.mode!=='pinch'||last.handIdx!==pinchHand.idx){
+     last={...c,mode:'pinch',handIdx:pinchHand.idx};
+   }
+ }
+
+ if(!orbitHand&&!pinchHand){
+   last=null;
+ }
+
+ // Update HUD status text
+ if(parsedHands.length>=2){
+   if(orbitHand&&pinchHand){
+     $('gesture').textContent='2 HANDS · ROTATE & PINCH';
+   }else if(orbitHand){
+     $('gesture').textContent='2 HANDS · OPEN PALM ROTATE';
+   }else if(pinchHand){
+     $('gesture').textContent='2 HANDS · PINCH · '+face+' FACE';
+   }else{
+     $('gesture').textContent='2 HANDS · POINT / HOVER';
+   }
  }else{
-  $('gesture').textContent='POINT / HOVER';
-  last=null;
+   if(pinchHand){
+     $('gesture').textContent='PINCH · '+face+' FACE';
+   }else if(orbitHand){
+     $('gesture').textContent='OPEN PALM · ROTATE';
+   }else{
+     $('gesture').textContent='POINT / HOVER';
+   }
  }
 }
 
 async function cameraStart(){
  try{
   let hands=new Hands({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f});
-  hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.65,minTrackingConfidence:.55});
+  hands.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:.65,minTrackingConfidence:.55});
   hands.onResults(results);
   webcamController=new Camera($('video'),{onFrame:async()=>hands.send({image:$('video')}),width:640,height:480});
   await webcamController.start();
-  $('status').textContent='Camera + hand tracking ready';
-  $('note').textContent='Camera live. Hand landmarks are processed in your browser; video is not uploaded.';
+  $('status').textContent='Camera + dual-hand tracking ready';
+  $('note').textContent='Camera live. Dual-hand tracking active. Hand landmarks processed locally in browser; video is not uploaded.';
  }catch(e){
   $('status').textContent='3D ready · camera unavailable';
-  $('note').textContent='Camera error: '+e.message+'. Allow camera access and use localhost or HTTPS. Face buttons still work.';
+  $('note').textContent='Camera error: '+e.message+'. Allow camera access and use localhost or HTTPS. Face buttons & mouse work.';
  }
 }
 window.startVirtualCubeCamera=cameraStart;
@@ -840,6 +901,14 @@ try{init();}catch(e){$('status').textContent='3D initialization failed: '+e.mess
    if('UDLRFB'.includes(key)){
      const faceButton=document.querySelector('#faces button[data-f="'+key+'"]');
      if(faceButton)faceButton.click();
+   }else if(event.key==='ArrowLeft'){
+     group.rotation.y+=Math.PI/12;
+   }else if(event.key==='ArrowRight'){
+     group.rotation.y-=Math.PI/12;
+   }else if(event.key==='ArrowUp'){
+     group.rotation.x=THREE.MathUtils.clamp(group.rotation.x-Math.PI/12,-1.25,1.25);
+   }else if(event.key==='ArrowDown'){
+     group.rotation.x=THREE.MathUtils.clamp(group.rotation.x+Math.PI/12,-1.25,1.25);
    }
  });
  window.virtualCubeReturnToLobby=returnToLobby;
