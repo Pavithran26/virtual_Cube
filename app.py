@@ -134,7 +134,7 @@ window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(w
 """
 # The old embedded HTML used an iframe-based Firebase sign-in gate. Authentication now
 # happens in the hosted component above. Strip the obsolete gate and keep the cube UI only.
-html = html.replace("\\\\n", "\n")
+html = html.replace("\\n", "\n")
 style_start = html.find("<style>")
 style_end = html.find("</style>", style_start)
 if style_start >= 0 and style_end >= 0 and "#auth-gate" in html[style_start:style_end]:
