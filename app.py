@@ -29,7 +29,15 @@ try:
     import firebase_admin
     from firebase_admin import auth as firebase_admin_auth, credentials
     if not firebase_admin._apps:
-        firebase_admin.initialize_app(credentials.Certificate(dict(st.secrets["firebase_admin"])))
+        admin_secret = st.secrets["firebase_admin"]
+        # Support pasting the downloaded service-account JSON as one TOML string,
+        # or supplying each service-account property as its own TOML field.
+        service_account_info = (
+            json.loads(admin_secret["service_account_json"])
+            if "service_account_json" in admin_secret
+            else dict(admin_secret)
+        )
+        firebase_admin.initialize_app(credentials.Certificate(service_account_info))
     auth_component = components.declare_component(
         "virtual_cube_firebase_auth",
         url=st.secrets["auth_component"]["url"],
@@ -43,8 +51,20 @@ try:
         "messagingSenderId": "655864871830",
         "measurementId": "G-VZZFXK8N2G",
     }, key="firebase_auth")
-except Exception:
-    st.error("Firebase authentication is not configured. Follow the Firebase Hosting and Streamlit secrets setup in README.md.")
+except KeyError as exc:
+    st.error(
+        f"Firebase authentication is missing Streamlit secret {exc}. "
+        "Open Streamlit app settings → Secrets and add the [auth_component] and "
+        "[firebase_admin] sections described in README.md."
+    )
+    st.stop()
+except Exception as exc:
+    st.error(
+        f"Firebase authentication setup failed ({type(exc).__name__}). "
+        "Check that the service-account JSON belongs to project virtualcube-571b7 "
+        "and that the Hosting component URL is correct. "
+        f"Details: {exc}"
+    )
     st.stop()
 
 if not isinstance(firebase_id_token, str) or not firebase_id_token:
