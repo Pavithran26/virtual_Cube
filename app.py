@@ -2,6 +2,13 @@ import streamlit as st
 import streamlit.components.v1 as components
 import cv2
 
+import json
+firebase_config = dict(st.secrets.get("firebase", {}))
+required_firebase_keys = ("apiKey", "authDomain", "projectId", "appId")
+firebase_config_ready = all(firebase_config.get(k) for k in required_firebase_keys)
+firebase_config_json = json.dumps(firebase_config if firebase_config_ready else None)
+
+
 st.set_page_config(page_title="virtual_Cube", page_icon="🧊", layout="wide")
 st.markdown("""
 <style>
@@ -17,7 +24,7 @@ with st.sidebar:
  st.markdown("- Allow webcam access\n- Open palm + move: orbit cube\n- Select U / D / L / R / F / B\n- Pinch thumb + index, then move sideways: turn selected face")
  st.info("Camera frames are processed in your browser. Video is not uploaded or recorded by this app.")
  st.caption("Stack: Streamlit · OpenCV · MediaPipe Hands · Three.js")
-html = r"""
+html = r"""\n<style>\n#auth-gate{min-height:420px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 15%,#1b2d4b,#080e1b 70%);border:1px solid #2b3b56;border-radius:18px;color:#eef4ff;font-family:system-ui,sans-serif;padding:28px}\n.auth-card{width:min(440px,100%);padding:30px;background:#111c30;border:1px solid #354966;border-radius:20px;text-align:center;box-shadow:0 20px 70px #0005}.auth-mark{font-size:40px}.auth-card h2{margin:12px 0 5px;letter-spacing:-.04em}.auth-card p{color:#a8bbd8;font-size:13px;line-height:1.5}.auth-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 15px;border-radius:10px;border:1px solid #52637d;background:#f7f9fc;color:#1a2537;font-weight:700;cursor:pointer}.auth-google:disabled{opacity:.6;cursor:wait}.auth-google img{width:19px;height:19px}.auth-note{font-size:11px!important;color:#8198bd!important;margin-top:14px}.auth-error{color:#ffb5b5!important}.auth-user{display:none;align-items:center;gap:10px;justify-content:center;margin:12px 0 18px;font-size:12px;color:#b7c8e1}.auth-user img{width:32px;height:32px;border-radius:50%}#auth-signout{display:none;margin:0 auto 16px;border:1px solid #3a4e6c;background:#19263c;color:#dce8fa;border-radius:8px;padding:8px 12px;cursor:pointer}#vc{display:none}\n</style>\n<div id="auth-gate"><div class="auth-card"><div class="auth-mark">🧊</div><h2>Welcome to virtual_Cube</h2><p>Sign in with Google to unlock your hand-controlled Rubik’s Cube workspace.</p><div class="auth-user" id="auth-user"><img id="auth-photo" alt="" src=""><span id="auth-name"></span></div><button class="auth-google" id="auth-google"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Continue with Google</button><button id="auth-signout">Sign out</button><p id="auth-message" class="auth-note">Secure sign-in powered by Firebase Authentication.</p></div></div>\n
 <div id="vc">
  <div class="bar"><span id="status">Starting scene…</span><div id="faces"><button data-f="U" class="on">U ↑</button><button data-f="D">D ↓</button><button data-f="L">L ←</button><button data-f="R">R →</button><button data-f="F">F ●</button><button data-f="B">B ◌</button></div><button id="scramble">Scramble</button><button id="reset">Reset</button></div>
  <div class="stage"><div id="scene"></div><div class="hud"><small>GESTURE</small><b id="gesture">Waiting for hand</b><small>SELECTED FACE</small><b id="selected">U · Up</b></div>
@@ -36,7 +43,7 @@ html = r"""
 .foot{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#293a55}.foot div{padding:14px;background:#101a2d;display:flex;flex-direction:column;gap:6px}.foot b{font:10px monospace;letter-spacing:.1em;color:#a7f3d0}.foot span{font-size:11px;color:#afc0da;line-height:1.4}#note{padding:9px 13px;background:#0b1424;color:#8da5c8;font-size:11px;border-top:1px solid #293a55}
 @media(max-width:650px){.stage{height:570px}#faces{order:3;flex-basis:100%;justify-content:flex-start}.cam{width:120px;height:90px}.foot{grid-template-columns:1fr}.foot div{padding:9px 13px}}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script><script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script><script>window.__FIREBASE_CONFIG__ = __FIREBASE_CONFIG_JSON__;</script><script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script><script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
 (()=>{const $=id=>document.getElementById(id);let scene,camera,renderer,group,cubies=[],face='U',last=null;
 const colors={R:0xd94141,L:0xff8c38,U:0xf5f7fb,D:0xf4d83d,F:0x39bd83,B:0x3478ef},names={U:'Up',D:'Down',L:'Left',R:'Right',F:'Front',B:'Back'},mats={};
@@ -53,7 +60,40 @@ async function cameraStart(){try{let hands=new Hands({locateFile:f=>'https://cdn
 try{init();cameraStart()}catch(e){$('status').textContent='3D initialization failed: '+e.message}
 })();
 </script>
+
+<script>
+(function(){
+ const gate=document.getElementById('auth-gate'), app=document.getElementById('vc');
+ const button=document.getElementById('auth-google'), msg=document.getElementById('auth-message');
+ const signout=document.getElementById('auth-signout'), userBox=document.getElementById('auth-user');
+ function showError(text){msg.textContent=text;msg.className='auth-note auth-error';}
+ const cfg=window.__FIREBASE_CONFIG__;
+ if(!cfg){button.disabled=true;showError('Firebase is not configured yet. Add the web app settings to Streamlit secrets, then reload.');return;}
+ try{
+  firebase.initializeApp(cfg); const auth=firebase.auth(); auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+  button.addEventListener('click',async()=>{
+   button.disabled=true;msg.textContent='Opening Google sign-in…';msg.className='auth-note';
+   try{const provider=new firebase.auth.GoogleAuthProvider();await auth.signInWithPopup(provider);}
+   catch(e){showError((e.code||'auth/error')+': '+(e.message||'Sign-in failed'));button.disabled=false;}
+  });
+  signout.addEventListener('click',()=>auth.signOut());
+  auth.onAuthStateChanged(user=>{
+   if(user){
+    gate.style.display='none';app.style.display='block';
+    userBox.style.display='flex';document.getElementById('auth-name').textContent=user.displayName||user.email||'Signed in';
+    const photo=document.getElementById('auth-photo');if(user.photoURL){photo.src=user.photoURL;photo.style.display='block';}else photo.style.display='none';
+    button.style.display='none';signout.style.display='inline-block';
+   }else{
+    app.style.display='none';gate.style.display='flex';userBox.style.display='none';button.style.display='flex';button.disabled=false;signout.style.display='none';
+    msg.textContent='Secure sign-in powered by Firebase Authentication.';msg.className='auth-note';
+   }
+  });
+ }catch(e){button.disabled=true;showError('Firebase initialization failed: '+e.message);}
+})();
+</script>
+
 """
+html = html.replace("__FIREBASE_CONFIG_JSON__", firebase_config_json)
 components.html(html, height=760, scrolling=False)
 st.caption("Local run: streamlit run app.py · Camera requires localhost or HTTPS.")
 _ = cv2.__version__
