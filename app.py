@@ -5,46 +5,55 @@ st.set_page_config(
     page_title="virtual_Cube",
     page_icon="🧊",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
     .stApp {
-        background: radial-gradient(ellipse at top, #172746, #080c16 65%);
-        color: #eef4ff;
+        color: #1d3150;
         font-family: 'Space Grotesk', sans-serif;
+        background:
+            radial-gradient(ellipse at 10% 8%, rgba(122,204,255,.32), transparent 32%),
+            radial-gradient(ellipse at 90% 12%, rgba(197,174,255,.25), transparent 31%),
+            radial-gradient(ellipse at 62% 100%, rgba(144,242,220,.22), transparent 38%),
+            linear-gradient(135deg, #f7fbff 0%, #edf5ff 48%, #f8f5ff 100%);
     }
     header, footer { visibility: hidden; }
-    .block-container { padding-top: 1rem; max-width: 1600px; }
+    [data-testid="stSidebar"] { display: none; }
+    .block-container { padding-top: 1rem; padding-bottom: .5rem; max-width: 1700px; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    "## 🧊 virtual_Cube · "
-    "<span style='font-size:13px;color:#9db1d2'>REAL-TIME HAND TRACKING LAB</span>",
+    "<h1 style='color:#1b2e4b;letter-spacing:-.055em;margin-bottom:0'>"
+    "🧊 virtual_Cube <span style='font-size:13px;letter-spacing:.12em;"
+    "color:#6d83a4;font-weight:700'>HAND-TRACKING PLAYGROUND</span></h1>",
     unsafe_allow_html=True,
 )
-st.caption(
-    "Open palm = rotate the whole cube · Select a face, then pinch and drag to turn it."
-)
-st.info(
-    "Sign in with Google inside the cube below. If your browser blocks camera access "
-    "inside the embedded view, open the full-screen version using the link underneath."
+st.markdown(
+    "<p style='color:#637995;margin-top:8px'>Sign in, choose <b>Play Guide</b> "
+    "to learn the gestures, or choose <b>Play</b> for an immersive cube-only view. "
+    "Your camera feed stays hidden; only hand tracking is used.</p>",
+    unsafe_allow_html=True,
 )
 
-# Use a normal URL iframe, not a declared Streamlit custom component. This avoids the
-# custom-component componentReady handshake entirely. Firebase Auth and the cube run
-# together on the Firebase Hosting origin, where HTTPS and browser storage are available.
+# The hosted page owns Firebase sign-in and the gameplay. Play opens a top-level
+# Firebase tab so camera permission and immersive fullscreen are not constrained
+# by the Streamlit iframe.
 components.iframe(
     "https://virtualcube-571b7.web.app/",
-    height=850,
+    height=870,
     scrolling=True,
 )
 
 st.markdown(
-    "[Open virtual_Cube full-screen](https://virtualcube-571b7.web.app/)",
+    "<div style='text-align:center;color:#8193ad;font-size:11px;padding:2px 0 8px'>"
+    "Light glass UI · Real-time hand tracking · Video stays in your browser"
+    "</div>",
+    unsafe_allow_html=True,
 )
