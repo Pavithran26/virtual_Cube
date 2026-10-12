@@ -12,6 +12,7 @@ The cube and Firebase Google sign-in now run together on Firebase Hosting at **h
 - A signed-in game lobby with separate **Play** and **Play Guide** actions.
 - **Play** opens the top-level Firebase page in a new tab when launched from Streamlit, then enters an immersive, UI-free cube view. The webcam feed remains off-screen and is used only for hand tracking. Press Esc to exit. Keyboard U/D/L/R/F/B selects the face; pinch-drag turns it.
 - **Play Guide** opens the interactive tutorial before immersive play.
+- A clearly visible **Sign out** button sits in the signed-in lobby header. Press Esc during Play to return to the lobby before signing out.
 - Interactive 3D 3×3 cube with six colored faces.
 - A live holographic 3D hand is rendered from MediaPipe’s 21 hand landmarks, with glowing joints, connected finger bones, and a translucent palm.
 - Open palm motion rotates the whole cube in real time with bounded, smoother movement.
