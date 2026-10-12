@@ -10,8 +10,10 @@ The cube and Firebase Google sign-in now run together on Firebase Hosting at **h
 
 - Google sign-in UI powered by Firebase Authentication.
 - Interactive 3D 3×3 cube with six colored faces.
-- Open palm motion rotates the whole cube view.
+- A live holographic 3D hand is rendered from MediaPipe’s 21 hand landmarks, with glowing joints, connected finger bones, and a translucent palm.
+- Open palm motion rotates the whole cube in real time with bounded, smoother movement.
 - Select U / D / L / R / F / B, then pinch and drag to turn a face.
+- Light glassmorphism UI with frosted panels, reflective edges, soft shadows, and cyan/violet ambient lighting.
 - Tutorial, scramble, and reset controls.
 - Hand landmarks are processed in the browser; this app does not upload or record video.
 
