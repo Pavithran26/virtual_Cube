@@ -3,16 +3,85 @@
 <style>body{margin:0;background:#0b1220;color:#eaf1ff;font:14px system-ui}.card{padding:18px;border:1px solid #334765;border-radius:14px;text-align:center;background:#111c30}.btn{display:inline-flex;gap:10px;align-items:center;justify-content:center;border:0;border-radius:9px;padding:11px 16px;font-weight:700;cursor:pointer}.primary{background:#f7f9fc;color:#152033}.muted{color:#a9bad5;font-size:12px}.error{color:#ffb2b2;overflow-wrap:anywhere}</style>
 </head><body><div class="card"><h3>🧊 virtual_Cube</h3><p class="muted">Sign in with Google to unlock your cube.</p><button class="btn primary" id="login">Continue with Google</button><button class="btn" id="logout" style="display:none;background:#24344d;color:white">Sign out</button><p id="status" class="muted">Authentication required.</p></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-<script src="https://unpkg.com/streamlit-component-lib@1.4.0/dist/index.js"></script>
 <script>
 const cfg={"apiKey":"AIzaSyBjXqFHXQmtpPmZ9E9nkAPetmIr5oViZMo","authDomain":"virtualcube-571b7.firebaseapp.com","projectId":"virtualcube-571b7","appId":"1:655864871830:web:cb6d65bb5befc0cc6afbb7","storageBucket":"virtualcube-571b7.firebasestorage.app","messagingSenderId":"655864871830","measurementId":"G-VZZFXK8N2G"};
-firebase.initializeApp(cfg);const auth=firebase.auth();
 const login=document.getElementById('login'),logout=document.getElementById('logout'),status=document.getElementById('status');
-function send(token){Streamlit.setComponentValue(token);Streamlit.setFrameHeight(180);}
-Streamlit.setComponentReady();Streamlit.setFrameHeight(180);
-login.onclick=async()=>{login.disabled=true;status.textContent='Opening Google sign-in…';try{await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());}catch(e){status.className='error';status.textContent=(e.code||'auth/error')+': '+e.message;login.disabled=false;}};
-logout.onclick=()=>auth.signOut();
-auth.onAuthStateChanged(async user=>{if(user){login.style.display='none';logout.style.display='inline-flex';status.className='muted';status.textContent='Signed in as '+(user.email||user.displayName||'Google user');try{send(await user.getIdToken());}catch(e){status.className='error';status.textContent='Could not get sign-in token.';}}else{login.style.display='inline-flex';login.disabled=false;logout.style.display='none';status.className='muted';status.textContent='Authentication required.';send(null);}});
-// Do not send null on every Streamlit render: that would erase the ID token
-// immediately after sign-in and can cause an authentication rerun loop.
+
+// Minimal Streamlit Components v1 protocol. This avoids depending on a library
+// global that is not exposed by the standalone CDN bundle.
+function sendMessageToStreamlit(type, data) {
+  window.parent.postMessage(Object.assign({
+    isStreamlitMessage: true,
+    type: type
+  }, data || {}), "*");
+}
+const Streamlit = {
+  setComponentReady: () => sendMessageToStreamlit("streamlit:componentReady", {apiVersion: 1}),
+  setFrameHeight: height => sendMessageToStreamlit("streamlit:setFrameHeight", {height}),
+  setComponentValue: value => sendMessageToStreamlit("streamlit:setComponentValue", {value, dataType: "json"}),
+  RENDER_EVENT: "streamlit:render"
+};
+
+// Keep the iframe connected and preserve its value across Streamlit reruns.
+// In particular, never clear the token merely because a render event was received.
+window.addEventListener("message", event => {
+  if (!event.data || event.data.type !== Streamlit.RENDER_EVENT) return;
+  Streamlit.setFrameHeight(180);
+});
+Streamlit.setComponentReady();
+Streamlit.setFrameHeight(180);
+
+function showError(message) {
+  status.className = 'error';
+  status.textContent = message;
+}
+try {
+  firebase.initializeApp(cfg);
+  const auth = firebase.auth();
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+
+  login.onclick = async () => {
+    login.disabled = true;
+    status.textContent = 'Opening Google sign-in…';
+    status.className = 'muted';
+    try {
+      await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    } catch (e) {
+      showError((e.code || 'auth/error') + ': ' + (e.message || 'Sign-in failed'));
+      login.disabled = false;
+    }
+  };
+  logout.onclick = async () => {
+    try {
+      await auth.signOut();
+      Streamlit.setComponentValue(null);
+    } catch (e) {
+      showError('Sign-out failed: ' + (e.message || e));
+    }
+  };
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      login.style.display = 'none';
+      logout.style.display = 'inline-flex';
+      status.className = 'muted';
+      status.textContent = 'Signed in as ' + (user.email || user.displayName || 'Google user');
+      try {
+        Streamlit.setComponentValue(await user.getIdToken());
+        Streamlit.setFrameHeight(180);
+      } catch (e) {
+        showError('Could not get sign-in token: ' + (e.message || e));
+      }
+    } else {
+      login.style.display = 'inline-flex';
+      login.disabled = false;
+      logout.style.display = 'none';
+      status.className = 'muted';
+      status.textContent = 'Authentication required.';
+      Streamlit.setComponentValue(null);
+    }
+  });
+} catch (e) {
+  login.disabled = true;
+  showError('Firebase initialization failed: ' + (e.message || e));
+}
 </script></body></html>
