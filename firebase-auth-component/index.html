@@ -15,8 +15,42 @@
 </style>
 <div id="auth-gate"><div class="auth-card"><div class="auth-mark">🧊</div><h2>Welcome to virtual_Cube</h2><p>Sign in with Google to unlock your hand-controlled Rubik’s Cube workspace.</p><div class="auth-user" id="auth-user"><img id="auth-photo" alt="" src=""><span id="auth-name"></span></div><button class="auth-google" id="auth-google"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Continue with Google</button><button id="auth-signout">Sign out</button><p id="auth-message" class="auth-note">Secure sign-in powered by Firebase Authentication.</p></div></div>
 
+<div id="lobby" aria-label="virtual cube game menu">
+  <div class="lobby-topline">
+    <span class="lobby-orb">🧊</span>
+    <span class="lobby-brand">virtual_Cube <small>HAND-TRACKING PLAYGROUND</small></span>
+    <span class="lobby-status"><i></i> CAMERA TRACKING STARTS WHEN YOU PLAY</span>
+  </div>
+  <div class="lobby-hero">
+    <div class="lobby-copy">
+      <p class="lobby-eyebrow">YOUR SPACE. YOUR HAND. YOUR CUBE.</p>
+      <h1>Move your hand.<br><em>Move the cube.</em></h1>
+      <p class="lobby-description">Enter a real-time 3D cube experience. Your camera is used only to track your hand in the background — your face and camera feed are never shown on the play screen.</p>
+      <p id="lobby-player" class="lobby-player">You're signed in.</p>
+      <div class="lobby-actions">
+        <button id="play-now" class="lobby-play"><span class="action-icon">▶</span><span><strong>Play</strong><small>Enter immersive cube mode</small></span><span class="action-arrow">↗</span></button>
+        <button id="play-guide" class="lobby-guide"><span class="action-icon">✦</span><span><strong>Play Guide</strong><small>Learn the hand gestures</small></span><span class="action-arrow">→</span></button>
+      </div>
+      <p class="lobby-hint">Tip: press <kbd>Esc</kbd> any time to leave immersive play.</p>
+      <button id="lobby-signout" class="lobby-signout">Sign out</button>
+    </div>
+    <div class="lobby-visual" aria-hidden="true">
+      <div class="visual-ring ring-one"></div><div class="visual-ring ring-two"></div>
+      <div class="visual-glow"></div>
+      <div class="visual-cube">
+        <div class="cube-face cube-front"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="cube-face cube-right"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="cube-face cube-top"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="visual-label label-one">LIVE HAND INPUT <b>● READY</b></div>
+      <div class="visual-label label-two">3D CUBE <b>360°</b></div>
+    </div>
+  </div>
+  <div class="lobby-bottom"><span>01 / HAND MOTION</span><span>02 / SPATIAL ROTATION</span><span>03 / IMMERSIVE PLAY</span><span>PRIVATE BY DESIGN · VIDEO STAYS IN YOUR BROWSER</span></div>
+</div>
+
 <div id="vc">
- <div class="bar"><span id="status">Starting scene…</span><div id="faces"><button data-f="U" class="on">U ↑</button><button data-f="D">D ↓</button><button data-f="L">L ←</button><button data-f="R">R →</button><button data-f="F">F ●</button><button data-f="B">B ◌</button></div><button id="scramble">Scramble</button><button id="reset">Reset</button></div>
+ <div class="bar"><button id="back-to-lobby" title="Back to game menu">← Lobby</button><span id="status">Starting scene…</span><div id="faces"><button data-f="U" class="on">U ↑</button><button data-f="D">D ↓</button><button data-f="L">L ←</button><button data-f="R">R →</button><button data-f="F">F ●</button><button data-f="B">B ◌</button></div><button id="scramble">Scramble</button><button id="reset">Reset</button></div>
  <div class="stage"><div id="scene"></div><div class="hud"><small>GESTURE</small><b id="gesture">Waiting for hand</b><small>SELECTED FACE</small><b id="selected">U · Up</b></div>
  <div class="cam"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas><label>● LIVE CAMERA</label></div>
  <div class="guide" id="guide"><small>INTERACTIVE TUTORIAL · <span id="num">1 / 3</span></small><h3 id="title">Meet your cube</h3><p id="body">Allow camera access and hold one hand in view with your palm facing the camera.</p><div class="arrow" id="arrow">✦</div><div class="guidebtn"><button id="prev" disabled>← Back</button><button id="next">Next step →</button><button id="hide">Hide</button></div></div></div>
@@ -127,7 +161,38 @@ function turn(f,dir=1){let axis=['U','D'].includes(f)?'y':['L','R'].includes(f)?
 function choose(f){face=f;document.querySelectorAll('#faces button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));$('selected').textContent=f+' · '+names[f]}
 document.querySelectorAll('#faces button').forEach(b=>b.onclick=()=>choose(b.dataset.f));$('reset').onclick=()=>{camera.position.set(5.7,5,7.5);camera.lookAt(0,0,0);build();$('note').textContent='Cube restored to solved state.'};$('scramble').onclick=()=>{let n=0,fs=Object.keys(colors);function go(){turn(fs[Math.floor(Math.random()*6)],Math.random()>.5?1:-1);if(++n<12)setTimeout(go,260)}go()};
 const steps=[['Meet your cube','Allow camera access and hold one hand in view with your palm facing the camera.','✦'],['Orbit the whole cube','Spread your fingers into an open palm. Move your hand left/right or up/down to rotate the view.','↔'],['Turn one face','Select U, D, L, R, F, or B. Pinch thumb and index, then move sideways to turn that layer.','↻']];let si=0;function show(){let s=steps[si];$('num').textContent=(si+1)+' / 3';$('title').textContent=s[0];$('body').textContent=s[1];$('arrow').textContent=s[2];$('prev').disabled=si===0;$('next').textContent=si===2?'Got it ✓':'Next step →'}$('next').onclick=()=>{if(si<2){si++;show()}else $('guide').style.display='none'};$('prev').onclick=()=>{if(si){si--;show()}};$('hide').onclick=()=>$('guide').style.display='none';show();
-function results(r){let can=$('overlay'),ctx=can.getContext('2d');if(can.width!==can.clientWidth*2||can.height!==can.clientHeight*2){can.width=can.clientWidth*2;can.height=can.clientHeight*2}ctx.clearRect(0,0,can.width,can.height);let h=r.multiHandLandmarks&&r.multiHandLandmarks[0];if(!h){$('gesture').textContent='Waiting for hand';last=null;if(handRig)handRig.visible=false;return}updateVirtualHand(h);let p=h.map(v=>({x:v.x*can.width,y:v.y*can.height}));ctx.strokeStyle='#a7f3d0';ctx.lineWidth=3;[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]].forEach(a=>{ctx.beginPath();a.forEach((i,j)=>j?ctx.lineTo(p[i].x,p[i].y):ctx.moveTo(p[i].x,p[i].y));ctx.stroke()});p.forEach((v,i)=>{ctx.beginPath();ctx.fillStyle='#e7f0ff';ctx.arc(v.x,v.y,i===4||i===8?5:3,0,7);ctx.fill()});let pinch=Math.hypot(p[4].x-p[8].x,p[4].y-p[8].y)<can.width*.085,open=!pinch&&[8,12,16,20].every(i=>p[i].y<p[0].y+can.height*.12),c={x:(p[0].x+p[9].x)/2,y:(p[0].y+p[9].y)/2};if(pinch){$('gesture').textContent='PINCH · '+face+' FACE';if(last&&last.mode==='pinch'&&Math.abs(c.x-last.x)>can.width*.075){turn(face,c.x<last.x?1:-1);last={...c,mode:'pinch'}}else if(!last||last.mode!=='pinch')last={...c,mode:'pinch'}}else if(open){$('gesture').textContent='OPEN PALM · ROTATE';if(last&&last.mode==='open'){const dx=(c.x-last.x)/can.width,dy=(c.y-last.y)/can.height;group.rotation.y+=THREE.MathUtils.clamp(dx*5,-.18,.18);group.rotation.x=THREE.MathUtils.clamp(group.rotation.x+dy*4,-1.25,1.25)}last={...c,mode:'open'}}else{$('gesture').textContent='HAND DETECTED';last=null}}
+function results(r){
+ const h=r.multiHandLandmarks&&r.multiHandLandmarks[0];
+ if(!h){
+  $('gesture').textContent='Waiting for hand';
+  last=null;
+  if(handRig)handRig.visible=false;
+  return;
+ }
+ updateVirtualHand(h);
+ // Normalized 0..1 coordinates keep interaction working while the webcam preview is hidden.
+ const pinch=Math.hypot(h[4].x-h[8].x,h[4].y-h[8].y)<.085;
+ const open=!pinch&&[8,12,16,20].every(i=>h[i].y<h[0].y+.12);
+ const c={x:(h[0].x+h[9].x)/2,y:(h[0].y+h[9].y)/2};
+ if(pinch){
+  $('gesture').textContent='PINCH · '+face+' FACE';
+  if(last&&last.mode==='pinch'&&Math.abs(c.x-last.x)>.075){
+   turn(face,c.x<last.x?1:-1);
+   last={...c,mode:'pinch'};
+  }else if(!last||last.mode!=='pinch')last={...c,mode:'pinch'};
+ }else if(open){
+  $('gesture').textContent='OPEN PALM · ROTATE';
+  if(last&&last.mode==='open'){
+   const dx=c.x-last.x,dy=c.y-last.y;
+   group.rotation.y+=THREE.MathUtils.clamp(dx*5,-.18,.18);
+   group.rotation.x=THREE.MathUtils.clamp(group.rotation.x+dy*4,-1.25,1.25);
+  }
+  last={...c,mode:'open'};
+ }else{
+  $('gesture').textContent='HAND DETECTED';
+  last=null;
+ }
+}
 async function cameraStart(){try{let hands=new Hands({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f});hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.65,minTrackingConfidence:.55});hands.onResults(results);webcamController=new Camera($('video'),{onFrame:async()=>hands.send({image:$('video')}),width:640,height:480});await webcamController.start();$('status').textContent='Camera + hand tracking ready';$('note').textContent='Camera live. Hand landmarks are processed in your browser; video is not uploaded.'}catch(e){$('status').textContent='3D ready · camera unavailable';$('note').textContent='Camera error: '+e.message+'. Allow camera access and use localhost or HTTPS. Face buttons still work.'}}
 window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(webcamController)webcamController.stop();const v=$('video');if(v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}};window.addEventListener('virtual-cube-authenticated',()=>{cameraStart();window.dispatchEvent(new Event('resize'));});try{init()}catch(e){$('status').textContent='3D initialization failed: '+e.message}
 })();
@@ -135,34 +200,117 @@ window.startVirtualCubeCamera=cameraStart;window.stopVirtualCubeCamera=()=>{if(w
 
 <script>
 (function(){
- const gate=document.getElementById('auth-gate'), app=document.getElementById('vc');
+ const lobby=document.getElementById('lobby');
+ const app=document.getElementById('vc');
+ const playNow=document.getElementById('play-now');
+ const playGuide=document.getElementById('play-guide');
+ const guide=document.getElementById('guide');
+
+ function launch(mode){
+   lobby.style.display='none';
+   app.style.display='block';
+   app.classList.remove('is-playing','is-guide');
+   document.body.classList.remove('play-mode','guide-mode');
+   if(mode==='play'){
+     app.classList.add('is-playing');
+     document.body.classList.add('play-mode');
+     guide.style.display='none';
+     const front=document.querySelector('#faces button[data-f="F"]');
+     if(front)front.click();
+     window.dispatchEvent(new Event('resize'));
+     if(document.documentElement.requestFullscreen){
+       const result=document.documentElement.requestFullscreen();
+       if(result&&result.catch)result.catch(()=>{});
+     }
+   }else{
+     app.classList.add('is-guide');
+     document.body.classList.add('guide-mode');
+     guide.style.display='block';
+     window.dispatchEvent(new Event('resize'));
+   }
+   if(window.startVirtualCubeCamera)window.startVirtualCubeCamera();
+ }
+ function returnToLobby(){
+   if(!lobby||!app)return;
+   app.style.display='none';
+   app.classList.remove('is-playing','is-guide');
+   document.body.classList.remove('play-mode','guide-mode');
+   if(window.stopVirtualCubeCamera)window.stopVirtualCubeCamera();
+   if(document.fullscreenElement&&document.exitFullscreen){
+     const result=document.exitFullscreen();
+     if(result&&result.catch)result.catch(()=>{});
+   }
+   lobby.style.display='flex';
+ }
+ playNow.addEventListener('click',()=>launch('play'));
+ playGuide.addEventListener('click',()=>launch('guide'));
+ document.getElementById('back-to-lobby').addEventListener('click',returnToLobby);
+ document.addEventListener('keydown',event=>{
+   if(event.key==='Escape'&&app.classList.contains('is-playing')){
+     returnToLobby();
+     return;
+   }
+   if(!app.classList.contains('is-playing'))return;
+   const key=event.key.toUpperCase();
+   if('UDLRFB'.includes(key)){
+     const faceButton=document.querySelector('#faces button[data-f="'+key+'"]');
+     if(faceButton)faceButton.click();
+   }
+ });
+ window.virtualCubeReturnToLobby=returnToLobby;
+})();
+</script>
+<script>
+(function(){
+ const gate=document.getElementById('auth-gate'), lobby=document.getElementById('lobby'), app=document.getElementById('vc');
  const button=document.getElementById('auth-google'), msg=document.getElementById('auth-message');
- const signout=document.getElementById('auth-signout'), userBox=document.getElementById('auth-user');
+ const signout=document.getElementById('auth-signout'), lobbySignout=document.getElementById('lobby-signout');
+ const userBox=document.getElementById('auth-user');
  function showError(text){msg.textContent=text;msg.className='auth-note auth-error';}
  const cfg=window.__FIREBASE_CONFIG__;
- if(!cfg){button.disabled=true;showError('Firebase is not configured yet. Add the web app settings to Streamlit secrets, then reload.');return;}
+ if(!cfg){button.disabled=true;showError('Firebase is not configured yet.');return;}
  try{
-  firebase.initializeApp(cfg); const auth=firebase.auth(); auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+  firebase.initializeApp(cfg);
+  const auth=firebase.auth();
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
   button.addEventListener('click',async()=>{
    button.disabled=true;msg.textContent='Opening Google sign-in…';msg.className='auth-note';
-   try{const provider=new firebase.auth.GoogleAuthProvider();await auth.signInWithPopup(provider);}
+   try{await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());}
    catch(e){showError((e.code||'auth/error')+': '+(e.message||'Sign-in failed'));button.disabled=false;}
   });
   signout.addEventListener('click',()=>auth.signOut());
+  lobbySignout.addEventListener('click',()=>auth.signOut());
   auth.onAuthStateChanged(user=>{
    if(user){
-    gate.style.display='none';app.style.display='block';window.dispatchEvent(new Event('resize'));window.dispatchEvent(new Event('virtual-cube-authenticated'));
-    userBox.style.display='flex';document.getElementById('auth-name').textContent=user.displayName||user.email||'Signed in';
-    const photo=document.getElementById('auth-photo');if(user.photoURL){photo.src=user.photoURL;photo.style.display='block';}else photo.style.display='none';
-    button.style.display='none';signout.style.display='inline-block';
+    gate.style.display='none';
+    app.style.display='none';
+    app.classList.remove('is-playing','is-guide');
+    document.body.classList.remove('play-mode','guide-mode');
+    if(window.stopVirtualCubeCamera)window.stopVirtualCubeCamera();
+    lobby.style.display='flex';
+    document.getElementById('lobby-player').textContent='Signed in as '+(user.displayName||user.email||'Google user')+'. Ready when you are.';
+    userBox.style.display='flex';
+    document.getElementById('auth-name').textContent=user.displayName||user.email||'Signed in';
+    const photo=document.getElementById('auth-photo');
+    if(user.photoURL){photo.src=user.photoURL;photo.style.display='block';}else photo.style.display='none';
+    button.style.display='none';
+    signout.style.display='none';
    }else{
-    app.style.display='none';if(window.stopVirtualCubeCamera)window.stopVirtualCubeCamera();gate.style.display='flex';userBox.style.display='none';button.style.display='flex';button.disabled=false;signout.style.display='none';
-    msg.textContent='Secure sign-in powered by Firebase Authentication.';msg.className='auth-note';
+    if(window.virtualCubeReturnToLobby)window.virtualCubeReturnToLobby();
+    app.style.display='none';
+    lobby.style.display='none';
+    if(window.stopVirtualCubeCamera)window.stopVirtualCubeCamera();
+    gate.style.display='flex';
+    userBox.style.display='none';
+    button.style.display='flex';
+    button.disabled=false;
+    signout.style.display='none';
+    msg.textContent='Secure sign-in powered by Firebase Authentication.';
+    msg.className='auth-note';
    }
   });
  }catch(e){button.disabled=true;showError('Firebase initialization failed: '+e.message);}
 })();
-</script>
 
 
 
@@ -388,5 +536,42 @@ body::after{width:320px;height:320px;right:-120px;bottom:2%;background:rgba(164,
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 
+<style id="play-lobby-and-immersive-mode">
+#lobby{display:none;position:relative;min-height:min(850px,calc(100vh - 30px));width:100%;flex-direction:column;justify-content:space-between;gap:30px;overflow:hidden;padding:clamp(20px,4vw,46px);border:1px solid rgba(255,255,255,.84);border-radius:30px;color:#1d3150;background:linear-gradient(145deg,rgba(255,255,255,.75),rgba(243,249,255,.48));-webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);box-shadow:inset 0 1px 0 #fff,0 30px 80px rgba(95,131,175,.2)}
+#lobby::before{content:"";position:absolute;top:-160px;right:4%;width:420px;height:420px;border-radius:50%;pointer-events:none;background:rgba(140,199,255,.35);filter:blur(70px)}
+.lobby-topline,.lobby-bottom{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
+.lobby-orb{display:grid;place-items:center;width:48px;height:48px;border:1px solid #fff;border-radius:16px;background:linear-gradient(145deg,#fff,#e4f2ff);box-shadow:inset 0 1px 0 #fff,0 8px 20px rgba(90,135,185,.18);font-size:25px}
+.lobby-brand{display:flex;flex-direction:column;font-weight:800;letter-spacing:-.04em;font-size:17px}.lobby-brand small{margin-top:3px;font-size:9px;letter-spacing:.15em;color:#7588a6;font-weight:700}
+.lobby-status{margin-left:auto;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid rgba(255,255,255,.95);border-radius:999px;background:rgba(255,255,255,.56);color:#68809c;font-size:9px;letter-spacing:.09em;font-weight:800}.lobby-status i{width:7px;height:7px;border-radius:50%;background:#15b7a5;box-shadow:0 0 10px rgba(21,183,165,.45)}
+.lobby-hero{display:grid;grid-template-columns:minmax(310px,1fr) minmax(300px,.95fr);gap:clamp(24px,5vw,76px);align-items:center;position:relative;z-index:1}.lobby-copy{max-width:620px}
+.lobby-eyebrow{color:#0b9dab!important;font-size:10px!important;font-weight:900;letter-spacing:.18em}
+.lobby-copy h1{font-size:clamp(38px,5.5vw,70px);line-height:.98;letter-spacing:-.07em;margin:18px 0;color:#192c48}.lobby-copy h1 em{font-style:normal;background:linear-gradient(90deg,#168aaf,#6487e9 62%,#9077dc);background-clip:text;-webkit-background-clip:text;color:transparent}
+.lobby-description{max-width:500px;line-height:1.75;color:#647792;font-size:14px}.lobby-player{display:inline-flex;max-width:100%;padding:8px 11px;border:1px solid rgba(255,255,255,.95);border-radius:10px;background:rgba(255,255,255,.62);color:#476180;font-size:11px;overflow-wrap:anywhere}
+.lobby-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;max-width:540px}
+.lobby-actions button{display:flex;align-items:center;gap:11px;min-width:0;padding:15px 13px;border:1px solid rgba(255,255,255,.94);border-radius:17px;text-align:left;color:#263e5c;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(233,243,255,.68));box-shadow:inset 0 1px 0 #fff,0 12px 28px rgba(91,128,172,.15);cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
+.lobby-actions button:hover{transform:translateY(-3px);box-shadow:inset 0 1px 0 #fff,0 18px 34px rgba(91,128,172,.2)}
+.lobby-actions .lobby-play{color:white;background:linear-gradient(135deg,#247eb7,#587fdd 60%,#8877d5);border-color:rgba(255,255,255,.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 14px 30px rgba(83,126,206,.28)}
+.action-icon{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.75);color:#257eab;font-size:15px}.lobby-play .action-icon{color:#366ab6}
+.lobby-actions button>span:nth-child(2){display:flex;flex-direction:column;gap:5px;min-width:0}.lobby-actions strong{font-size:14px;letter-spacing:-.02em}.lobby-actions small{font-size:10px;font-weight:500;opacity:.76;white-space:nowrap}.action-arrow{margin-left:auto;font-size:16px;opacity:.75}
+.lobby-hint{font-size:11px;color:#7b8ea8;margin-top:13px}.lobby-hint kbd{padding:3px 6px;border:1px solid rgba(255,255,255,.95);border-radius:5px;background:rgba(255,255,255,.65);color:#536985}.lobby-signout{padding:7px 0;border:0;background:transparent;color:#7789a2;text-decoration:underline;font-size:11px;cursor:pointer}
+.lobby-visual{position:relative;min-height:420px;display:grid;place-items:center;perspective:1000px}.visual-glow{position:absolute;width:290px;height:290px;border-radius:50%;background:linear-gradient(135deg,rgba(96,213,237,.36),rgba(154,137,245,.32));filter:blur(36px)}
+.visual-ring{position:absolute;left:50%;top:50%;border:1px solid rgba(106,153,211,.31);border-radius:50%;transform:translate(-50%,-50%) rotateX(65deg) rotateZ(-20deg)}.ring-one{width:390px;height:390px;animation:lobbyOrbit 22s linear infinite}.ring-two{width:300px;height:300px;transform:translate(-50%,-50%) rotateX(70deg) rotateZ(44deg);border-style:dashed;animation:lobbyOrbit 29s linear infinite reverse}@keyframes lobbyOrbit{to{rotate:360deg}}
+.visual-cube{position:relative;width:166px;height:166px;transform-style:preserve-3d;transform:rotateX(-24deg) rotateY(-32deg);animation:cubeFloat 7s ease-in-out infinite;filter:drop-shadow(0 38px 28px rgba(67,101,156,.2))}@keyframes cubeFloat{0%,100%{translate:0 0;transform:rotateX(-24deg) rotateY(-32deg)}50%{translate:0 -15px;transform:rotateX(-17deg) rotateY(5deg)}}
+.cube-face{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:5px;padding:7px;border:1px solid rgba(255,255,255,.95);border-radius:15px;background:rgba(255,255,255,.44);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 0 18px rgba(255,255,255,.35)}
+.cube-face i{border-radius:5px;border:1px solid rgba(255,255,255,.72);box-shadow:inset 0 2px 3px rgba(255,255,255,.45),0 2px 5px rgba(30,55,86,.12)}
+.cube-front{transform:translateZ(83px)}.cube-right{transform:rotateY(90deg) translateZ(83px)}.cube-top{transform:rotateX(90deg) translateZ(83px)}
+.cube-front i:nth-child(1),.cube-front i:nth-child(2),.cube-front i:nth-child(3),.cube-front i:nth-child(4),.cube-front i:nth-child(6){background:linear-gradient(145deg,#b6f6ec,#52c9c9)}.cube-front i:nth-child(5),.cube-front i:nth-child(7),.cube-front i:nth-child(8),.cube-front i:nth-child(9){background:linear-gradient(145deg,#8fb6ff,#5d81e8)}.cube-right i{background:linear-gradient(145deg,#d5c6ff,#9682e7)}.cube-top i{background:linear-gradient(145deg,#fff,#dcecff)}
+.visual-label{position:absolute;display:flex;flex-direction:column;gap:5px;padding:11px 13px;border:1px solid rgba(255,255,255,.9);border-radius:14px;background:rgba(255,255,255,.68);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 10px 24px rgba(84,120,164,.13);font-size:8px;letter-spacing:.12em;color:#7a8ba5}.visual-label b{font-size:10px;color:#287b91;letter-spacing:.04em}.label-one{top:7%;right:0}.label-two{bottom:10%;left:0}
+.lobby-bottom{justify-content:space-between;flex-wrap:wrap;padding-top:15px;border-top:1px solid rgba(255,255,255,.8);color:#8394ad;font-size:8px;font-weight:800;letter-spacing:.12em}
+#vc .cam{position:fixed!important;left:-2000px!important;top:0!important;width:640px!important;height:480px!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;z-index:-10!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
+#vc.is-guide .stage{height:560px}
+#vc.is-playing{position:fixed!important;inset:0!important;z-index:99999!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:radial-gradient(ellipse at 50% 44%,rgba(177,224,255,.3),transparent 48%),linear-gradient(135deg,#eff8ff,#e8f1ff 58%,#f4efff)!important;box-shadow:none!important}
+#vc.is-playing .bar,#vc.is-playing .hud,#vc.is-playing .cam,#vc.is-playing .guide,#vc.is-playing .foot,#vc.is-playing #note{display:none!important}
+#vc.is-playing .stage{position:absolute;inset:0;width:100%;height:100%;min-height:100%;border:0;background:transparent!important;overflow:hidden}
+#vc.is-playing #scene{position:absolute;inset:0;width:100%;height:100%}#vc.is-playing #scene canvas{display:block;width:100%;height:100%}
+body.play-mode{padding:0!important;overflow:hidden!important}body.play-mode #lobby,body.play-mode #auth-gate{display:none!important}body.guide-mode{padding:clamp(6px,1.5vw,20px)}
+@media(max-width:900px){.lobby-hero{grid-template-columns:1fr;gap:10px}.lobby-visual{min-height:280px;order:-1}.visual-cube{scale:.9}.ring-one{width:290px;height:290px}.ring-two{width:230px;height:230px}.lobby-copy h1{font-size:clamp(38px,8vw,62px)}.label-one{right:2%;top:3%}.label-two{left:3%;bottom:3%}}
+@media(max-width:560px){#lobby{padding:16px;min-height:calc(100vh - 12px);gap:22px;border-radius:22px}.lobby-status{display:none}.lobby-brand{font-size:15px}.lobby-visual{min-height:235px}.visual-cube{scale:.75}.lobby-actions{grid-template-columns:1fr}.lobby-bottom{gap:10px}#vc.is-playing{width:100vw!important}}
+</style>
 </body>
 </html>
